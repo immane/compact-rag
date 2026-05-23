@@ -1,6 +1,6 @@
 # compact-rag 企业 RAG 系统设计文档
 
-> **版本**: v1.1 | **日期**: 2026-05-23 | **状态**: 设计阶段
+> **版本**: v1.2 | **日期**: 2026-05-24 | **状态**: 设计阶段
 
 ---
 
@@ -24,6 +24,7 @@
    - 5.11 [RAG 管线编排](#511-rag-管线编排)
     - 5.12 [API 层](#512-api-层)
     - 5.13 [文件存储子系统](#513-文件存储子系统)
+    - 5.14 [Streamlit 管理后台](#514-streamlit-管理后台)
 6. [数据流](#6-数据流)
 7. [数据库设计](#7-数据库设计)
    - 7.1 [关系型数据库（SQLAlchemy + Alembic）](#71-关系型数据库sqlalchemy--alembic)
@@ -178,6 +179,7 @@ Tool Calling 流程：
 | **构建工具** | pyproject.toml (hatchling) | — | Python 标准构建方式 |
 | **文件存储** | Local / MinIO / OSS / Kodo / S3 | — | 统一抽象层，配置切换后端 |
 | **文件存储 SDK** | minio-py / oss2 / qiniu / boto3 | latest | 按需安装，策略模式 |
+| **管理后台** | Streamlit | latest | Python 原生，零前端，几分钟搭建管理 UI |
 
 ### 3.2 模型选型决策矩阵
 
@@ -280,11 +282,29 @@ compact-rag/
 │       │   ├── __init__.py
 │       │   └── pipeline.py            # 完整 RAG 问答流程
 │       │
-│       └── api/                        # REST API
+│       ├── api/                        # REST API
+│       │   ├── __init__.py
+│       │   ├── deps.py                # FastAPI 依赖注入
+│       │   ├── router.py              # 路由注册
+│       │   └── schemas.py             # 请求/响应 Pydantic 模型
+│       │
+│       └── admin/                      # Streamlit 管理后台
 │           ├── __init__.py
-│           ├── deps.py                # FastAPI 依赖注入
-│           ├── router.py              # 路由注册
-│           └── schemas.py             # 请求/响应 Pydantic 模型
+│           ├── app.py                 # Streamlit 主入口 + 页面路由
+│           ├── pages/
+│           │   ├── dashboard.py       # 系统概览仪表盘
+│           │   ├── collections.py     # 集合管理页
+│           │   ├── documents.py       # 文档管理页
+│           │   ├── ingestion.py       # 摄入任务监控页
+│           │   ├── conversations.py   # 对话历史浏览页
+│           │   ├── playground.py      # RAG 问答调试台
+│           │   ├── api_keys.py        # API Key 管理页
+│           │   └── storage.py         # 文件存储浏览页
+│           ├── components/
+│           │   ├── stats.py           # 统计卡片组件
+│           │   ├── status.py          # 状态徽章组件
+│           │   └── charts.py          # 图表可视化组件
+│           └── client.py              # 内部 HTTP 客户端，调用自己的 API
 │
 ├── config/
 │   ├── default.yaml                   # 默认配置
@@ -1116,6 +1136,13 @@ class RAGResponse(BaseModel):
 | `DELETE` | `/v1/collections/{name}` | 删除集合 |
 | `GET` | `/v1/conversations` | 列出对话历史 |
 | `GET` | `/v1/conversations/{id}` | 获取对话详情 |
+| `DELETE` | `/v1/conversations/{id}` | 删除对话 |
+| `GET` | `/v1/ingestion-jobs` | 摄入任务列表 |
+| `GET` | `/v1/ingestion-jobs/{id}` | 摄入任务详情 |
+| `GET` | `/v1/api-keys` | API 密钥列表 |
+| `POST` | `/v1/api-keys` | 创建 API 密钥 |
+| `PATCH` | `/v1/api-keys/{id}` | 更新 API 密钥（激活/停用） |
+| `DELETE` | `/v1/api-keys/{id}` | 删除 API 密钥 |
 | `GET` | `/v1/health` | 健康检查 |
 | `GET` | `/v1/info` | 系统信息（模型、集合数、文档数） |
 
@@ -1448,6 +1475,384 @@ class TempFileCleaner:
     └── 私有化部署 ──→ MinIO (K8s/Docker)
 ```
 
+### 5.14 Streamlit 管理后台
+
+**文件**: `admin/app.py`, `admin/pages/*.py`
+
+**设计动机**: 虽然系统提供了完整的 REST API，但在日常运维和调试中，需要一个可视化的管理界面来执行文档上传、集合管理、对话追溯、RAG 效果测试等操作。Streamlit 是 Python 原生方案，能够在几分钟内搭建功能齐全的管理后台，无需前端开发，保持与项目"最小依赖"原则的一致性。
+
+#### 5.14.1 设计原则
+
+| 原则 | 说明 |
+|------|------|
+| **零前端依赖** | 100% Python + Streamlit，无 HTML/CSS/JS 编写 |
+| **复用 API** | 所有操作通过内部 HTTP 客户端调用 `/v1/*` 接口，与外部用户走相同通道 |
+| **只读优先** | 管理界面操作需显式确认，避免误删 |
+| **分页支持** | 所有列表页面支持分页和关键字搜索 |
+| **配置驱动** | API Base URL 通过配置/环境变量传入 |
+| **可选部署** | Streamlit 独立进程，不影响主 API 服务 |
+
+#### 5.14.2 页面架构
+
+```
+Streamlit Admin (http://localhost:8501)
+│
+├── 🏠 仪表盘 (Dashboard)           # 系统概览
+│   ├── 统计卡片 (文档数/集合数/对话数/存储用量)
+│   ├── 服务健康状态 (API / DB / ChromaDB / Storage)
+│   ├── 最近摄入任务状态
+│   └── 24h 对话活跃度趋势
+│
+├── 📁 集合管理 (Collections)       # 集合 CRUD
+│   ├── 集合列表 + 搜索 + 分页
+│   ├── 创建新集合 (名称、描述、embedding 模型、分块参数)
+│   ├── 集合详情 (文档数、分块总数、创建时间)
+│   └── 删除集合 (二次确认)
+│
+├── 📄 文档管理 (Documents)         # 文档全生命周期
+│   ├── 文档列表 (可按集合/状态/格式过滤)
+│   ├── 文件上传 (拖拽上传 + 选择目标集合)
+│   ├── 文档详情 (元数据、分块预览、表格统计)
+│   ├── 重新摄入 (force=True)
+│   └── 删除文档 (含向量和关联数据)
+│
+├── ⚙️ 摄入监控 (Ingestion)         # 摄入任务跟踪
+│   ├── 摄入任务列表 (状态、进度、耗时)
+│   ├── 实时进度条 (processed/total)
+│   ├── 错误详情展开
+│   └── 临时文件管理 (TTL 清理)
+│
+├── 💬 对话浏览 (Conversations)     # 对话审计
+│   ├── 对话列表 (按时间/集合/模型过滤)
+│   ├── 对话详情 (完整消息历史)
+│   ├── 消息详情 (含引用来源、token 用量、延迟)
+│   ├── 导出对话 (JSON/CSV 下载)
+│   └── 删除对话
+│
+├── 🧪 RAG 问答台 (Playground)      # 交互式测试
+│   ├── 集合选择器
+│   ├── LLM 模型选择 (OpenAI/Anthropic/Ollama)
+│   ├── 检索参数实时调整 (top_k, rerank, hybrid)
+│   ├── 问答聊天界面 (多轮对话)
+│   ├── 检索结果展示 (文档、分数、引用)
+│   ├── 流式输出开关
+│   └── 参数预设保存/加载
+│
+├── 🔑 API 密钥 (API Keys)          # 密钥管理
+│   ├── 密钥列表 (名称、权限、状态、过期时间)
+│   ├── 创建新密钥
+│   ├── 密钥激活/停用
+│   └── 删除密钥 (二次确认)
+│
+└── 📦 文件存储 (Storage)           # 存储后端浏览
+    ├── 存储文件列表 (按类型/后端/集合过滤)
+    ├── 文件预览/下载
+    ├── 存储用量统计 (按后端/集合)
+    └── 临时文件清理
+```
+
+#### 5.14.3 核心组件设计
+
+**内部 HTTP 客户端** (`admin/client.py`):
+
+```python
+import httpx
+from typing import Any
+
+class AdminAPIClient:
+    """
+    管理后台内部 HTTP 客户端
+    所有 Streamlit 页面通过此客户端调用 /v1/* API，
+    与外部 API 用户走完全相同的接口通道（dogfooding 原则）。
+    """
+
+    def __init__(self, base_url: str = "http://localhost:8000"):
+        self.base_url = base_url.rstrip("/")
+        self.client = httpx.Client(timeout=30.0)
+
+    # ─── 系统 ───
+    def health(self) -> dict: ...
+    def info(self) -> dict: ...
+
+    # ─── 集合 ───
+    def list_collections(self, page: int = 1, page_size: int = 20) -> dict: ...
+    def create_collection(self, **kwargs) -> dict: ...
+    def delete_collection(self, name: str) -> dict: ...
+
+    # ─── 文档 ───
+    def list_documents(self, collection: str = None,
+                       page: int = 1, page_size: int = 20) -> dict: ...
+    def upload_document(self, file_path: str, collection: str) -> dict: ...
+    def get_document(self, doc_id: str) -> dict: ...
+    def delete_document(self, doc_id: str) -> dict: ...
+
+    # ─── 摄入 ───
+    def list_ingestion_jobs(self) -> dict: ...
+
+    # ─── 对话 ───
+    def list_conversations(self, page: int = 1, page_size: int = 20) -> dict: ...
+    def get_conversation(self, conv_id: str) -> dict: ...
+    def delete_conversation(self, conv_id: str) -> dict: ...
+
+    # ─── 问答 ───
+    def chat(self, messages: list[dict], collection: str = None,
+             stream: bool = False, **kwargs) -> dict: ...
+    def chat_stream(self, messages: list[dict], **kwargs) -> Any: ...
+
+    # ─── API Keys ───
+    def list_api_keys(self) -> dict: ...
+    def create_api_key(self, name: str, permissions: list[str]) -> dict: ...
+    def toggle_api_key(self, key_id: str, active: bool) -> dict: ...
+    def delete_api_key(self, key_id: str) -> dict: ...
+
+    # ─── 存储文件 ───
+    def list_storage_files(self, **filters) -> dict: ...
+    def get_file_url(self, storage_key: str) -> str: ...
+    def delete_storage_file(self, storage_key: str) -> dict: ...
+
+```
+
+**Streamlit 主入口** (`admin/app.py`):
+
+```python
+import streamlit as st
+
+def main():
+    st.set_page_config(
+        page_title="Compact-RAG Admin",
+        page_icon="🔍",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
+
+    # 侧边栏导航
+    with st.sidebar:
+        st.title("🔍 Compact-RAG")
+        st.caption("企业 RAG 系统管理后台")
+
+        # API 连接状态指示器
+        api_status = check_api_health()
+        if api_status:
+            st.success("🟢 API 已连接")
+        else:
+            st.error("🔴 API 不可达")
+            st.stop()
+
+        st.divider()
+
+        # 全局 API 地址配置
+        api_base = st.text_input(
+            "API Base URL",
+            value=get_api_base_url(),
+            help="后端 API 服务地址"
+        )
+
+        st.divider()
+
+        # 页面导航
+        page = st.radio(
+            "导航",
+            ["🏠 仪表盘", "📁 集合管理", "📄 文档管理",
+             "⚙️ 摄入监控", "💬 对话浏览", "🧪 RAG 问答台",
+             "🔑 API 密钥", "📦 文件存储"],
+            label_visibility="collapsed",
+        )
+
+        # 版本信息
+        st.divider()
+        st.caption(f"版本: {get_version()}")
+
+    # 页面路由
+    pages = {
+        "🏠 仪表盘":        render_dashboard,
+        "📁 集合管理":      render_collections,
+        "📄 文档管理":      render_documents,
+        "⚙️ 摄入监控":      render_ingestion,
+        "💬 对话浏览":      render_conversations,
+        "🧪 RAG 问答台":    render_playground,
+        "🔑 API 密钥":      render_api_keys,
+        "📦 文件存储":      render_storage,
+    }
+    pages[page](client=get_or_create_client(api_base))
+
+if __name__ == "__main__":
+    main()
+```
+
+#### 5.14.4 关键页面设计要点
+
+**仪表盘** (`admin/pages/dashboard.py`):
+
+```python
+def render_dashboard(client: AdminAPIClient):
+    # 第一行: 统计卡片 (4 列)
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        render_stat_card("📄 文档总数", doc_count, delta="+12 本周")
+    with col2:
+        render_stat_card("📁 集合数", collection_count)
+    with col3:
+        render_stat_card("💬 对话数", conversation_count, delta="+45 今日")
+    with col4:
+        render_stat_card("💾 存储用量", storage_usage)
+
+    # 第二行: 服务健康状态 (4 格)
+    st.subheader("服务状态")
+    cols = st.columns(4)
+    for col, (name, ok) in zip(cols, health_checks.items()):
+        with col:
+            st.metric(name, "✅ 正常" if ok else "❌ 异常")
+
+    # 第三行: 最近摄入任务
+    st.subheader("最近摄入任务")
+    render_ingestion_table(jobs[:10])
+
+    # 第四行: 系统配置快照
+    with st.expander("📋 系统配置"):
+        st.json(config_snapshot)
+```
+
+**RAG 问答台** (`admin/pages/playground.py`):
+
+```python
+def render_playground(client: AdminAPIClient):
+    # 左侧: 参数配置面板
+    with st.sidebar:
+        st.subheader("检索参数")
+        collection = st.selectbox("知识库集合", collections)
+        top_k = st.slider("Top-K", 1, 20, 5)
+        rerank = st.checkbox("Cross-Encoder 重排序", True)
+        hybrid = st.checkbox("混合检索 (Dense + BM25)", True)
+        stream = st.checkbox("流式输出", False)
+
+        st.divider()
+        st.subheader("LLM 参数")
+        temperature = st.slider("Temperature", 0.0, 1.0, 0.1)
+
+        if st.button("🔄 重置对话", use_container_width=True):
+            st.session_state.messages = []
+
+    # 右侧: 聊天界面
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+            if "sources" in msg:
+                with st.expander("📎 引用来源"):
+                    for src in msg["sources"]:
+                        st.caption(f"{src['filename']} (p.{src['page_number']}) "
+                                   f"— 相关度: {src['score']:.3f}")
+                        st.text(src["content_snippet"][:300] + "...")
+
+    if prompt := st.chat_input("输入你的问题..."):
+        # 调用 /v1/chat/completions
+        messages = [{"role": m["role"], "content": m["content"]}
+                    for m in st.session_state.messages]
+        messages.append({"role": "user", "content": prompt})
+
+        if stream:
+            # 流式输出
+            placeholder = st.empty()
+            full_response = ""
+            for chunk in client.chat_stream(messages=messages,
+                                            collection=collection, ...):
+                full_response += chunk
+                placeholder.markdown(full_response + "▌")
+            placeholder.markdown(full_response)
+        else:
+            response = client.chat(messages=messages,
+                                   collection=collection, ...)
+            st.markdown(response["answer"])
+```
+
+**文档上传** (`admin/pages/documents.py`):
+
+```python
+def render_documents(client: AdminAPIClient):
+    # 上传区域
+    with st.expander("📤 上传新文档", expanded=False):
+        uploaded_files = st.file_uploader(
+            "选择文件",
+            type=["pdf", "docx", "txt", "md", "html"],
+            accept_multiple_files=True,
+        )
+        target_collection = st.selectbox("目标集合", collections)
+
+        if uploaded_files and st.button("开始摄入", type="primary"):
+            for f in uploaded_files:
+                # 保存到临时文件 → 调用 /v1/documents/ingest
+                with st.spinner(f"正在摄入 {f.name}..."):
+                    result = client.upload_document(f, target_collection)
+                    st.toast(f"✅ {f.name} 摄入完成")
+
+    # 文档列表
+    col_filter = st.selectbox("集合过滤", ["全部"] + collections)
+    status_filter = st.selectbox("状态过滤",
+                                  ["全部", "completed", "processing", "failed"])
+
+    docs = client.list_documents(
+        collection=col_filter if col_filter != "全部" else None,
+        page=page, page_size=page_size,
+    )
+    # 渲染可交互表格
+    st.dataframe(format_doc_table(docs["data"]), use_container_width=True)
+```
+
+#### 5.14.5 与 REST API 的对应关系
+
+Streamlit 管理后台的所有操作最终都映射到已有的 REST API 端点，不额外添加专有端点：
+
+| Streamlit 页面操作 | 对应的 API 调用 |
+|---|---|
+| 查看仪表盘统计 | `GET /v1/health` + `GET /v1/info` + `GET /v1/documents` + `GET /v1/collections` |
+| 创建/删除集合 | `POST /v1/collections` / `DELETE /v1/collections/{name}` |
+| 上传文档 | `POST /v1/documents/ingest` (multipart/form-data) |
+| 查看文档列表 | `GET /v1/documents` |
+| 删除文档 | `DELETE /v1/documents/{doc_id}` |
+| 浏览对话 | `GET /v1/conversations` / `GET /v1/conversations/{id}` |
+| RAG 问答测试 | `POST /v1/chat/completions` (含 `stream: true` 流式) |
+| API Key 管理 | `GET/POST/DELETE /v1/api-keys` |
+| 文件存储浏览 | `GET /v1/files/{storage_key}` + `DELETE /v1/files/{storage_key}` |
+| 摄入监控 | `GET /v1/ingestion-jobs` |
+
+#### 5.14.6 依赖配置
+
+Streamlit 作为可选依赖，不强制安装：
+
+```toml
+[project.optional-dependencies]
+admin = [
+    "streamlit>=1.35",
+    "pandas>=2.0",
+    "plotly>=5.18",
+]
+```
+
+#### 5.14.7 启动方式
+
+```bash
+# 1. 先启动 API 服务
+compact-rag serve --config config/default.yaml
+
+# 2. 再启动管理后台（另一个终端）
+streamlit run src/compact_rag/admin/app.py --server.port 8501
+
+# 或者通过 CLI 命令一键启动
+compact-rag admin
+# 内部启动 Streamlit 子进程 + 可选 API 代理
+```
+
+#### 5.14.8 安全考虑
+
+| 措施 | 说明 |
+|------|------|
+| **默认仅本地访问** | `streamlit run --server.address 127.0.0.1` |
+| **生产环境需要认证** | 通过环境变量 `ADMIN_PASSWORD` 设置访问密码 |
+| **API 操作审计** | 所有管理操作通过 API 调用，操作记录在服务端日志中 |
+| **网络隔离** | 生产环境建议将 Streamlit 放在内网或 VPN 后 |
+
 ---
 
 ## 6. 数据流
@@ -1743,7 +2148,23 @@ GET    /v1/conversations/{id}      # 对话详情 + 消息历史
 DELETE /v1/conversations/{id}      # 删除对话
 ```
 
-#### 第五组：系统接口
+#### 第五组：摄入任务接口（供管理后台使用）
+
+```
+GET    /v1/ingestion-jobs          # 摄入任务列表（支持状态/集合过滤）
+GET    /v1/ingestion-jobs/{id}     # 摄入任务详情
+```
+
+#### 第六组：API 密钥管理接口（供管理后台使用）
+
+```
+GET    /v1/api-keys                # 密钥列表
+POST   /v1/api-keys                # 创建新密钥
+DELETE /v1/api-keys/{id}           # 删除密钥
+PATCH  /v1/api-keys/{id}           # 激活/停用密钥
+```
+
+#### 第七组：系统接口
 
 ```
 GET    /v1/health                  # 健康检查（含 DB/ChromaDB/Storage 连通性）
@@ -1951,6 +2372,10 @@ compact-rag serve --config config/default.yaml
 
 # API 访问
 curl http://localhost:8000/v1/health
+
+# 启动管理后台（另开终端，需先安装 admin 依赖: pip install -e ".[admin]"）
+streamlit run src/compact_rag/admin/app.py --server.port 8501
+# 浏览器访问 http://localhost:8501
 ```
 
 ### 12.2 生产环境
@@ -2064,7 +2489,26 @@ CMD ["uvicorn", "compact_rag.main:app", "--host", "0.0.0.0", "--port", "8000"]
 | OSSBackend / KodoBackend / S3Backend | 云存储后端 | P2 |
 | TempFileCleaner 定时清理 | 临时文件管理 | P1 |
 
-### Phase 6 — 测试 + 文档
+### Phase 6 — 管理后台 (Streamlit)
+
+| 任务 | 产出 | 优先级 |
+|------|------|--------|
+| `admin/client.py` | 内部 HTTP 客户端，封装所有 API 调用 | P1 |
+| `admin/app.py` | Streamlit 主入口 + 页面路由 + 侧边栏 | P1 |
+| `admin/pages/dashboard.py` | 系统仪表盘（统计卡片、健康状态） | P1 |
+| `admin/pages/collections.py` | 集合管理 CRUD | P1 |
+| `admin/pages/documents.py` | 文档上传/列表/详情/删除 | P1 |
+| `admin/pages/ingestion.py` | 摄入任务监控 + 进度跟踪 | P2 |
+| `admin/pages/conversations.py` | 对话浏览 + 消息详情 + 导出 | P2 |
+| `admin/pages/playground.py` | RAG 问答调试台（交互式测试） | P1 |
+| `admin/pages/api_keys.py` | API Key 管理 | P2 |
+| `admin/pages/storage.py` | 文件存储浏览 + 清理 | P2 |
+| `admin/components/` | 可复用 UI 组件（统计卡片、状态徽章等） | P1 |
+| `/v1/ingestion-jobs` API | 摄入任务查询端点 | P1 |
+| `/v1/api-keys` API | API 密钥管理端点 | P2 |
+| `compact-rag admin` CLI | 一键启动管理后台命令 | P2 |
+
+### Phase 7 — 测试 + 文档
 
 | 任务 | 产出 | 优先级 |
 |------|------|--------|
@@ -2142,6 +2586,11 @@ dev = [
 production = [
     "asyncmy>=0.2",
 ]
+admin = [
+    "streamlit>=1.35",
+    "pandas>=2.0",
+    "plotly>=5.18",
+]
 ```
 
 ## 附录 B: 设计决策记录
@@ -2159,6 +2608,7 @@ production = [
 | D-009 | 文件存储使用抽象接口 + 策略模式 | 与 LLM 抽象保持一致，配置切换后端 | 直接耦合 S3 SDK |
 | D-010 | 开发环境默认 MinIO | S3 兼容，零成本，部署简单 | 本地文件系统 |
 | D-011 | 国内生产推荐七牛云 Kodo | 外网流量费最低 (0.26元/GB)，CDN深度集成 | 阿里云 OSS |
+| D-012 | 管理后台用 Streamlit | Python 原生，零前端开发，与系统"最小依赖"原则一致；通过内部 HTTP 客户端复用 API，走 dogfooding 路径 | FastAPI Admin, 纯前端 (React/Vue), Gradio |
 
 ---
 

@@ -11,14 +11,10 @@
             "id": "40f669db4e22e201",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "design/compact-rag-design.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "compact-rag-design"
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Graph view"
             }
           }
         ]
@@ -94,7 +90,6 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "design/compact-rag-design.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +99,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for compact-rag-design"
+              "title": "Backlinks"
             }
           },
           {
@@ -113,12 +108,11 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "design/compact-rag-design.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from compact-rag-design"
+              "title": "Outgoing links"
             }
           },
           {
@@ -156,13 +150,12 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "design/compact-rag-design.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of compact-rag-design"
+              "title": "Outline"
             }
           }
         ]
@@ -185,6 +178,31 @@
   },
   "active": "6932bd111d26da6a",
   "lastOpenFiles": [
-    "research/file-storage.md"
+    "research/design-contracts-rag.md",
+    "design/CONTRACTS.md",
+    "design/DESIGN.md",
+    "research/contracts-analysis.md",
+    "processes/implementation.md",
+    "design/DESIGN.md",
+    "task/05-table-extraction.md",
+    "task/04-document-ingestion.md",
+    "task/03-relational-database.md",
+    "task/02-common-infrastructure.md",
+    "task/01-config-management.md",
+    "task/00-README.md",
+    "task/07-vector-store.md",
+    "task/19-performance-optimization.md",
+    "task/18-deployment.md",
+    "task/17-testing-strategy.md",
+    "task/16-error-handling.md",
+    "task/15-database-design.md",
+    "task/14-streamlit-admin.md",
+    "task/13-file-storage.md",
+    "task/12-api-layer.md",
+    "task/11-rag-pipeline.md",
+    "task/10-tool-calling.md",
+    "task/09-llm-generation.md",
+    "task/08-hybrid-retrieval.md",
+    "task/06-embedding-service.md"
   ]
 }
