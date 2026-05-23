@@ -1,0 +1,40 @@
+# compact-rag 生产环境配置覆盖
+# 仅包含需要覆盖默认值的字段
+
+database:
+  url: "mysql+asyncmy://user:password@localhost:3306/compact_rag"
+  echo: false
+  pool_size: 20
+  max_overflow: 40
+
+embedding:
+  device: "cpu"
+  use_onnx: true
+  batch_size: 128
+
+chromadb:
+  persist_directory: "/var/lib/compact-rag/chromadb"
+
+llm:
+  temperature: 0.0
+  max_tokens: 4096
+  timeout: 120
+
+ingestion:
+  chunk_size: 1000
+  chunk_overlap: 100
+
+storage:
+  backend: "minio"
+  minio:
+    endpoint: "minio:9000"
+    access_key: "${MINIO_ACCESS_KEY}"
+    secret_key: "${MINIO_SECRET_KEY}"
+    bucket: "compact-rag"
+    secure: false
+
+admin:
+  host: "0.0.0.0"
+  port: 8501
+
+log_level: "WARNING"

@@ -1,0 +1,83 @@
+# compact-rag 开发环境默认配置
+
+database:
+  url: "sqlite+aiosqlite:///data/compact-rag.db"
+  echo: false
+  pool_size: 5
+  max_overflow: 10
+
+embedding:
+  model_name: "BAAI/bge-small-zh-v1.5"
+  device: "cpu"
+  normalize: true
+  batch_size: 64
+  use_onnx: false
+  max_seq_length: 512
+
+chromadb:
+  persist_directory: "./data/chromadb"
+  collection_name: "default"
+
+retrieval:
+  dense_top_k: 100
+  sparse_top_k: 100
+  fusion_top_k: 50
+  rerank_top_k: 10
+  fusion_method: "rrf"
+  fusion_alpha: 0.5
+
+llm:
+  #provider: "ollama"
+  #model: "deepseek-r1:7b"
+  provider: "openai"
+  model: "deepseek-v4-flash"
+  api_key: "your-openai-api-key"
+  api_base: "https://api.deepseek.com"
+  temperature: 0.1
+  max_tokens: 20480
+  timeout: 60
+
+ingestion:
+  chunk_size: 500
+  chunk_overlap: 50
+  chunking_strategy: "recursive"
+  supported_extensions:
+    - ".pdf"
+    - ".docx"
+    - ".txt"
+    - ".md"
+    - ".html"
+
+storage:
+  backend: "local"
+  local:
+    root_dir: "./data/storage"
+    base_url: "http://localhost:8000/files"
+  minio:
+    endpoint: "localhost:9000"
+    access_key: ""
+    secret_key: ""
+    bucket: "compact-rag"
+    secure: false
+  oss:
+    access_key_id: ""
+    access_key_secret: ""
+    endpoint: "oss-cn-hangzhou.aliyuncs.com"
+    bucket: "compact-rag"
+  kodo:
+    access_key: ""
+    secret_key: ""
+    bucket: "compact-rag"
+    domain: ""
+  s3:
+    region: "us-east-1"
+    access_key_id: ""
+    secret_access_key: ""
+    bucket: "compact-rag"
+
+admin:
+  host: "127.0.0.1"
+  port: 8501
+  password: null
+
+log_level: "INFO"

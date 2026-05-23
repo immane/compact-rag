@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Data
+data/chromadb/
+data/storage/
+data/compact-rag.db
+data/documents/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+.pytest_cache/
+htmlcov/
+.coverage
+*.coverage.*
+
+# Obsidian
+.obsidian/
+
+# Alembic
+src/compact_rag/storage/db/migrations/versions/*.py
+!src/compact_rag/storage/db/migrations/versions/.gitkeep

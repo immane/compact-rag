@@ -1,0 +1,36 @@
+# compact-rag 文件存储后端配置模板
+# 使用时将目标后端的配置复制到 default.yaml 或 production.yaml 中
+
+# 本地文件系统
+local:
+  root_dir: "./data/storage"
+  base_url: "http://localhost:8000/files"
+
+# MinIO (Docker: docker run -p 9000:9000 -p 9001:9001 quay.io/minio/minio server /data --console-address ":9001")
+minio:
+  endpoint: "localhost:9000"
+  access_key: "minioadmin"
+  secret_key: "minioadmin"
+  bucket: "compact-rag"
+  secure: false
+
+# 阿里云 OSS
+oss:
+  access_key_id: ""
+  access_key_secret: ""
+  endpoint: "oss-cn-hangzhou.aliyuncs.com"
+  bucket: "compact-rag"
+
+# 七牛云 Kodo
+kodo:
+  access_key: ""
+  secret_key: ""
+  bucket: "compact-rag"
+  domain: ""
+
+# AWS S3
+s3:
+  region: "us-east-1"
+  access_key_id: ""
+  secret_access_key: ""
+  bucket: "compact-rag"
