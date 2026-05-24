@@ -45,13 +45,9 @@ class TestGetSettingsDependency:
 class TestGetDbSession:
     @pytest.mark.asyncio
     async def test_yields_session(self, test_settings):
-        _cached_settings.cache_clear()
-        _cached_settings.cache_clear()
-
-        with patch("compact_rag.api.deps.get_settings", return_value=test_settings):
-            async for session in get_db_session():
-                assert isinstance(session, AsyncSession)
-                break
+        async for session in get_db_session(settings=test_settings):
+            assert isinstance(session, AsyncSession)
+            break
 
 
 class TestGetLlmClient:

@@ -4,10 +4,6 @@
   "remoteUser": "vscode",
   "workspaceFolder": "/workspace/compact-rag",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace/compact-rag,type=bind,consistency=cached",
-  "mounts": [
-    "source=compact-rag-venv,target=/workspace/compact-rag/.venv,type=volume",
-    "source=compact-rag-data,target=/workspace/compact-rag/data,type=volume"
-  ],
   "forwardPorts": [8000, 8501],
   "settings": {
     "python.defaultInterpreterPath": "/workspace/compact-rag/.venv/bin/python",

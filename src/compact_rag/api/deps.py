@@ -6,7 +6,7 @@ import hashlib
 from functools import lru_cache
 from typing import AsyncGenerator
 
-from fastapi import Header, HTTPException
+from fastapi import Depends, Header, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from compact_rag.config.settings import Settings, get_settings
@@ -17,11 +17,12 @@ def _cached_settings() -> Settings:
     return get_settings()
 
 
-async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+async def get_db_session(
+    settings: Settings = Depends(get_settings),
+) -> AsyncGenerator[AsyncSession, None]:
     """Yield an async database session, auto-closed after request."""
     from compact_rag.storage.db.engine import create_engine, create_session_factory
 
-    settings = _cached_settings()
     engine = create_engine(settings.database)
     session_factory = create_session_factory(engine)
     async with session_factory() as session:
