@@ -20,5 +20,5 @@
     "COMPACT_RAG_CONFIG": "config/default.yaml"
   },
   "features": {},
-  "overrideCommand": false
+  "overrideCommand": true
 }
