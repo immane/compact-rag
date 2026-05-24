@@ -1,4 +1,4 @@
-.PHONY: help install dev-install serve admin test test-cov lint clean migrate migrate-create
+.PHONY: help install dev-install serve admin test test-cov lint clean migrate migrate-create ci-install ci-lint ci-test ci github-ci
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -43,6 +43,22 @@ lint: ## Lint code
 lint-fix: ## Auto-fix lint issues
 	python -m ruff check --fix src/compact_rag/
 	python -m ruff format src/compact_rag/
+
+ci-install: ## Install deps like GitHub Actions CI
+	python -m pip install --upgrade pip
+	pip install -e ".[dev]"
+	pip install ruff
+
+ci-lint: ## Run lint exactly like GitHub Actions
+	ruff check src/compact_rag/
+	ruff format --check src/compact_rag/
+
+ci-test: ## Run tests with coverage exactly like GitHub Actions
+	pytest --cov=src/compact_rag --cov-report=term-missing --cov-report=xml -v
+
+ci: ci-lint ci-test ## Run local CI suite (lint + coverage tests)
+
+github-ci: ci-install ci-lint ci-test ## Run full CI flow (install + lint + tests), mirrors GitHub Actions
 
 clean: ## Clean build artifacts
 	rm -rf build/ dist/ *.egg-info/ .pytest_cache/ htmlcov/ .coverage
