@@ -5,6 +5,7 @@ import json
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import AsyncGenerator
+import os
 
 from compact_rag.common.exceptions import (
     ConfigurationError,
@@ -569,16 +570,22 @@ class LLMFactory:
     def create(settings: LLMSettings) -> LLMClient:
         provider = settings.provider
         if provider == LLMProvider.OPENAI:
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise ConfigurationError("OPENAI_API_KEY must be set in the environment")
             return OpenAIClient(
                 model=settings.model,
-                api_key=settings.api_key,
+                api_key=api_key,
                 api_base=settings.api_base,
                 timeout=settings.timeout,
             )
         elif provider == LLMProvider.ANTHROPIC:
+            api_key = os.getenv("ANTHROPIC_API_KEY")
+            if not api_key:
+                raise ConfigurationError("ANTHROPIC_API_KEY must be set in the environment")
             return AnthropicClient(
                 model=settings.model,
-                api_key=settings.api_key,
+                api_key=api_key,
                 timeout=settings.timeout,
             )
         elif provider == LLMProvider.OLLAMA:

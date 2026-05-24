@@ -31,7 +31,6 @@ llm:
   #model: "deepseek-r1:7b"
   provider: "openai"
   model: "deepseek-v4-flash"
-  api_key: "sk-e6ab2e5f2a524dc2a9ba7b63f97c0436"
   api_base: "https://api.deepseek.com"
   temperature: 0.1
   max_tokens: 20480

@@ -166,6 +166,22 @@ class Settings(BaseSettings):
         """
         from compact_rag.common.exceptions import ConfigurationError
 
+        # Load .env into environment so callers that read os.getenv() (e.g. LLMFactory)
+        # can pick up keys defined in a .env file. This uses python-dotenv if
+        # available; failure to import is non-fatal.
+        try:
+            from dotenv import load_dotenv
+
+            env_path = _resolve_config(".env")
+            if env_path.exists():
+                load_dotenv(env_path)
+            else:
+                # Try default behavior (cwd)
+                load_dotenv()
+        except Exception:
+            # dotenv not installed or failed to load — proceed without raising.
+            pass
+
         # Determine config file path
         if config_path is None:
             config_path = os.environ.get("COMPACT_RAG_CONFIG", "config/default.yaml")
