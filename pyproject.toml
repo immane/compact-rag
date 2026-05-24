@@ -59,7 +59,7 @@ dev = [
     "pytest-cov>=5.0",
     "pytest-mock>=3.14",
     "httpx>=0.27",
-    "asyncmy>=0.6",
+    "aiomysql>=0.1",
     "python-dotenv>=1.0",
 ]
 admin = [

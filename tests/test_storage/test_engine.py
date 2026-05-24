@@ -22,7 +22,7 @@ class TestCreateEngine:
 
     def test_create_with_mysql_url(self):
         settings = DatabaseSettings(
-            url="mysql+asyncmy://user:pass@localhost:3306/mydb",
+            url="mysql+aiomysql://user:pass@localhost:3306/mydb",
             echo=False,
             pool_size=10,
             max_overflow=20,
