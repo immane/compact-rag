@@ -23,20 +23,19 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
 
-      - name: Install dependencies
+      - name: Show runtime
         run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
-          pip install ruff
+          python --version
+          pip --version
+
+      - name: Install dependencies
+        run: ./scripts/setup-python-dev.sh
 
       - name: Lint with ruff
-        run: |
-          ruff check src/compact_rag/
-          ruff format --check src/compact_rag/
+        run: make ci-lint
 
       - name: Test with coverage
-        run: |
-          pytest --cov=src/compact_rag --cov-report=term-missing --cov-report=xml -v
+        run: make ci-test
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
