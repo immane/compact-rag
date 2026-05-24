@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession

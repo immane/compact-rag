@@ -102,7 +102,7 @@ async def serve_file(
     backend=Depends(get_storage_backend),
 ):
     """Proxy file download/access through storage backend."""
-    from fastapi.responses import RedirectResponse, StreamingResponse
+    from fastapi.responses import StreamingResponse
 
     from compact_rag.common.exceptions import FileNotFoundError
 

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -26,7 +25,7 @@ class TableExtractor:
 
     @staticmethod
     def evaluate_table_quality(markdown_table: str) -> dict:
-        lines = [l.strip() for l in markdown_table.strip().split("\n") if l.strip()]
+        lines = [line.strip() for line in markdown_table.strip().split("\n") if line.strip()]
         if len(lines) < 2:
             return {"valid": False, "score": 0.0, "reason": "Too few lines"}
 
@@ -36,11 +35,11 @@ class TableExtractor:
         if not has_separator:
             return {"valid": False, "score": 0.0, "reason": "No separator row"}
 
-        data_lines = [l for l in lines if not re.match(r"^\|[-| :]+\|$", l)]
+        data_lines = [line for line in lines if not re.match(r"^\|[-| :]+\|$", line)]
         if len(data_lines) < 1:
             return {"valid": False, "score": 0.0, "reason": "No data rows"}
 
-        col_counts = [len(l.split("|")) - 2 for l in data_lines]
+        col_counts = [len(line.split("|")) - 2 for line in data_lines]
         consistent = len(set(col_counts)) == 1
 
         score = 0.5

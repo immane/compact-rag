@@ -6,7 +6,7 @@ import time
 from typing import Any, AsyncGenerator
 
 from compact_rag.common.logger import get_logger
-from compact_rag.generation.llm import LLMClient, LLMFactory
+from compact_rag.generation.llm import LLMClient
 from compact_rag.generation.prompt import PromptManager
 from compact_rag.retrieval.retriever import HybridRetriever
 from compact_rag.storage.schema import RAGCitation, RAGResponse

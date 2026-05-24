@@ -139,23 +139,39 @@ class AdminAPIClient:
 
     # ── Chat ────────────────────────────────────────────────
 
-    def chat(self, messages: list[dict], collection: str = "default", top_k: int = 10, temperature: float = 0.1) -> dict:
+    def chat(
+        self,
+        messages: list[dict],
+        collection: str = "default",
+        top_k: int = 10,
+        temperature: float = 0.1,
+        use_rerank: bool = True,
+        use_hybrid: bool = True,
+    ) -> dict:
         return self._post("/v1/chat/completions", json={
             "messages": messages,
             "collection": collection,
-            "retrieval": {"top_k": top_k, "rerank": True, "hybrid_search": True},
+            "retrieval": {"top_k": top_k, "rerank": use_rerank, "hybrid_search": use_hybrid},
             "temperature": temperature,
             "stream": False,
         })
 
-    def chat_stream(self, messages: list[dict], collection: str = "default", top_k: int = 10, temperature: float = 0.1):
+    def chat_stream(
+        self,
+        messages: list[dict],
+        collection: str = "default",
+        top_k: int = 10,
+        temperature: float = 0.1,
+        use_rerank: bool = True,
+        use_hybrid: bool = True,
+    ):
         """Yield content chunks from SSE streaming response."""
         with self.session.post(
             f"{self.base_url}/v1/chat/completions",
-            json={
+                json={
                 "messages": messages,
                 "collection": collection,
-                "retrieval": {"top_k": top_k, "rerank": True, "hybrid_search": True},
+                "retrieval": {"top_k": top_k, "rerank": use_rerank, "hybrid_search": use_hybrid},
                 "temperature": temperature,
                 "stream": True,
             },

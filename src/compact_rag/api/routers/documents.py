@@ -217,7 +217,7 @@ async def delete_document(
     from compact_rag.storage.db.repository.chunk import ChunkRepository
 
     doc_repo = DocumentRepository()
-    chunk_repo = ChunkRepository()
+        # chunk_repo variable removed as it was unused
 
     doc = await doc_repo.get_by_id(session, doc_id)
     if doc is None:

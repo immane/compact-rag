@@ -4,7 +4,6 @@ import hashlib
 import re
 from typing import TYPE_CHECKING
 
-from compact_rag.common.exceptions import ChunkingError
 from compact_rag.common.logger import get_logger
 from compact_rag.storage.schema import DocumentChunk
 

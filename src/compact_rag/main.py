@@ -23,7 +23,7 @@ def serve(
     from compact_rag.api.router import create_app
     from compact_rag.config.settings import get_settings
 
-    settings = get_settings(config)
+    _settings = get_settings(config)
     fastapi_app = create_app(settings)
 
     import uvicorn

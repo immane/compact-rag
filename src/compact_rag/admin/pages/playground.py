@@ -65,11 +65,13 @@ def render(client: AdminAPIClient) -> None:
                 full_content = ""
                 try:
                     for chunk in client.chat_stream(
-                        messages=api_messages,
-                        collection=collection,
-                        top_k=top_k,
-                        temperature=temperature,
-                    ):
+                            messages=api_messages,
+                            collection=collection,
+                            top_k=top_k,
+                            temperature=temperature,
+                            use_rerank=use_rerank,
+                            use_hybrid=use_hybrid,
+                        ):
                         full_content += chunk
                         placeholder.markdown(full_content + "▌")
                     placeholder.markdown(full_content)
@@ -87,6 +89,8 @@ def render(client: AdminAPIClient) -> None:
                             collection=collection,
                             top_k=top_k,
                             temperature=temperature,
+                            use_rerank=use_rerank,
+                            use_hybrid=use_hybrid,
                         )
                         content = response.get("choices", [{}])[0].get("message", {}).get("content", "")
                         st.markdown(content)

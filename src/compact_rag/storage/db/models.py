@@ -13,9 +13,7 @@ from sqlalchemy import (
     JSON,
     String,
     Text,
-    func,
 )
-from sqlalchemy.dialects.sqlite import JSON as SQLiteJSON
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 

@@ -23,7 +23,7 @@ def render(client: AdminAPIClient) -> None:
             submitted = st.form_submit_button("Create", type="primary")
             if submitted and name:
                 try:
-                    result = client.create_collection(
+                    client.create_collection(
                         name=name,
                         description=description,
                         embedding_model=embedding_model,

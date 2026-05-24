@@ -231,7 +231,6 @@ class Settings(BaseSettings):
 
         This ensures that paths like ./data/chromadb work regardless of CWD.
         """
-        import re
 
         db_url = self.database.url
         if db_url.startswith("sqlite+aiosqlite:///") and not db_url.startswith("sqlite+aiosqlite:////"):

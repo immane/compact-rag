@@ -506,7 +506,6 @@ class OllamaClient(LLMClient):
                             status_code,
                         )
                         import httpx
-                        import httpx
 
                         try:
                             async with httpx.AsyncClient(
@@ -557,7 +556,7 @@ class OllamaClient(LLMClient):
                         if content:
                             yield content
         except asyncio.TimeoutError as e:
-            raise LLMTimeoutError(f"Ollama stream timed out", cause=e)
+            raise LLMTimeoutError("Ollama stream timed out", cause=e)
         except Exception as e:
             error_msg = str(e).lower()
             if "connection" in error_msg or "refused" in error_msg:
