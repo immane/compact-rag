@@ -67,10 +67,12 @@ def get_prompt_manager():
     return PromptManager()
 
 
+@lru_cache()
 def get_hybrid_retriever():
     """Get hybrid retriever instance."""
     from compact_rag.retrieval.retriever import HybridRetriever
 
+    from compact_rag.retrieval.query_transformer import QueryTransformer
     from compact_rag.retrieval.reranker import RerankerService
     from compact_rag.retrieval.sparse import BM25Retriever
 
@@ -78,12 +80,14 @@ def get_hybrid_retriever():
     vector_store = get_vector_store()
     bm25 = BM25Retriever()
     reranker = RerankerService()
+    query_transformer = QueryTransformer()
 
     return HybridRetriever(
         vector_store=vector_store,
         bm25_retriever=bm25,
         reranker=reranker,
         settings=settings.retrieval,
+        query_transformer=query_transformer,
     )
 
 

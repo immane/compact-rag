@@ -40,7 +40,7 @@ class RetrievalOptions(BaseModel):
 
 class ChatCompletionRequest(BaseModel):
     model: str = "gpt-4o-mini"
-    messages: list[ChatMessage]
+    messages: list[ChatMessage] = Field(min_length=1)
     collection: str = "default"
     retrieval: RetrievalOptions = Field(default_factory=RetrievalOptions)
     tools: list[dict] | None = None

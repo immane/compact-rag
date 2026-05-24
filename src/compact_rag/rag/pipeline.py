@@ -38,6 +38,8 @@ class RAGPipeline:
         collection: str = "default",
         stream: bool = False,
         top_k: int = 10,
+        use_hybrid_search: bool = True,
+        use_rerank: bool = True,
         conversation_id: str | None = None,
     ) -> Any:
         t_start = time.perf_counter()
@@ -56,7 +58,11 @@ class RAGPipeline:
 
         t_ret_start = time.perf_counter()
         retrieved = await self.retriever.retrieve(
-            query=question, collection=collection, top_k=top_k
+            query=question,
+            collection=collection,
+            top_k=top_k,
+            use_hybrid_search=use_hybrid_search,
+            use_rerank=use_rerank,
         )
         retrieval_latency = (time.perf_counter() - t_ret_start) * 1000
 
@@ -109,6 +115,8 @@ class RAGPipeline:
         conversation_history: list[dict] | None = None,
         collection: str = "default",
         top_k: int = 10,
+        use_hybrid_search: bool = True,
+        use_rerank: bool = True,
         conversation_id: str | None = None,
     ) -> AsyncGenerator[str, None]:
         messages = self._build_messages(question, conversation_history or [])
@@ -124,7 +132,11 @@ class RAGPipeline:
 
         t_ret_start = time.perf_counter()
         retrieved = await self.retriever.retrieve(
-            query=question, collection=collection, top_k=top_k
+            query=question,
+            collection=collection,
+            top_k=top_k,
+            use_hybrid_search=use_hybrid_search,
+            use_rerank=use_rerank,
         )
         retrieval_latency = (time.perf_counter() - t_ret_start) * 1000
 
@@ -178,14 +190,32 @@ class RAGPipeline:
         augmented = list(messages)
         rag_instruction = (
             "Use the following retrieved context to answer the user's question. "
+            "You may synthesize evidence across multiple documents and make careful implicit inferences "
+            "only when grounded in retrieved text. "
             "Cite sources using [Document N] notation when referencing specific information.\n\n"
             f"### Retrieved Context ###\n{context}\n### End Context ###\n\n"
             "Now answer the user's question based on the context above."
         )
-        for i, msg in enumerate(augmented):
+        target_index = None
+        for i in range(len(augmented) - 1, -1, -1):
+            msg = augmented[i]
             if msg["role"] == "user":
-                augmented[i]["content"] = f"{rag_instruction}\n\nUser Question: {msg['content']}"
+                target_index = i
                 break
+
+        if target_index is None:
+            augmented.append(
+                {
+                    "role": "user",
+                    "content": f"{rag_instruction}\n\nUser Question: ",
+                }
+            )
+            return augmented
+
+        original_question = augmented[target_index]["content"]
+        augmented[target_index]["content"] = (
+            f"{rag_instruction}\n\nUser Question: {original_question}"
+        )
         return augmented
 
     def _build_citations(self, results: list) -> list[RAGCitation]:

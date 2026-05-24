@@ -17,6 +17,8 @@ class BM25Retriever:
         self._bm25: BM25Okapi | None = None
         self.documents: list[str] = []
         self.doc_ids: list[str] = []
+        self.metadatas: list[dict] = []
+        self._doc_lookup: dict[str, tuple[str, dict]] = {}
         self._is_indexed = False
 
     def _tokenize(self, text: str) -> list[str]:
@@ -24,11 +26,34 @@ class BM25Retriever:
             return jieba.lcut(text)
         return text.split()
 
-    def index(self, documents: list[str], doc_ids: list[str]) -> None:
+    def index(
+        self,
+        documents: list[str],
+        doc_ids: list[str],
+        metadatas: list[dict] | None = None,
+    ) -> None:
+        if len(documents) != len(doc_ids):
+            raise ValueError("documents and doc_ids must have the same length")
+
+        if not documents:
+            self.clear()
+            logger.info("BM25 index cleared due to empty documents")
+            return
+
+        if metadatas is None:
+            metadatas = [{} for _ in documents]
+        if len(metadatas) != len(documents):
+            raise ValueError("metadatas must match documents length")
+
         tokenized = [self._tokenize(doc) for doc in documents]
         self._bm25 = BM25Okapi(tokenized, k1=1.5, b=0.75)
         self.documents = documents
         self.doc_ids = doc_ids
+        self.metadatas = metadatas
+        self._doc_lookup = {
+            doc_id: (documents[i], metadatas[i])
+            for i, doc_id in enumerate(doc_ids)
+        }
         self._is_indexed = True
         logger.info(f"BM25 index built with {len(documents)} documents")
 
@@ -40,8 +65,24 @@ class BM25Retriever:
         ranked = sorted(enumerate(scores), key=lambda x: x[1], reverse=True)[:top_k]
         return [(self.doc_ids[idx], float(score)) for idx, score in ranked if score > 0]
 
-    def rebuild_index(self, documents: list[str], doc_ids: list[str]) -> None:
-        self.index(documents, doc_ids)
+    def rebuild_index(
+        self,
+        documents: list[str],
+        doc_ids: list[str],
+        metadatas: list[dict] | None = None,
+    ) -> None:
+        self.index(documents, doc_ids, metadatas)
+
+    def clear(self) -> None:
+        self._bm25 = None
+        self.documents = []
+        self.doc_ids = []
+        self.metadatas = []
+        self._doc_lookup = {}
+        self._is_indexed = False
+
+    def get_document(self, doc_id: str) -> tuple[str, dict] | None:
+        return self._doc_lookup.get(doc_id)
 
     @property
     def is_indexed(self) -> bool:

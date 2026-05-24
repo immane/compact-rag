@@ -164,6 +164,69 @@ class VectorStore:
 
         return search_results
 
+    def fetch_documents(
+        self,
+        where: dict | None = None,
+        limit: int | None = None,
+        batch_size: int = 1000,
+    ) -> list[SearchResult]:
+        """Fetch stored chunks for downstream lexical indexing.
+
+        Returns SearchResult items with score=0.0 to reuse a shared structure.
+        """
+        try:
+            if limit is not None:
+                raw = self.collection.get(
+                    where=where,
+                    limit=limit,
+                    include=["documents", "metadatas"],
+                )
+                ids = raw.get("ids") or []
+                docs = raw.get("documents") or []
+                metas = raw.get("metadatas") or []
+                return [
+                    SearchResult(
+                        id=ids[i],
+                        content=docs[i] or "",
+                        score=0.0,
+                        metadata=metas[i] or {},
+                    )
+                    for i in range(len(ids))
+                ]
+
+            results: list[SearchResult] = []
+            offset = 0
+            while True:
+                raw = self.collection.get(
+                    where=where,
+                    limit=batch_size,
+                    offset=offset,
+                    include=["documents", "metadatas"],
+                )
+                ids = raw.get("ids") or []
+                docs = raw.get("documents") or []
+                metas = raw.get("metadatas") or []
+                if not ids:
+                    break
+
+                for i in range(len(ids)):
+                    results.append(
+                        SearchResult(
+                            id=ids[i],
+                            content=docs[i] or "",
+                            score=0.0,
+                            metadata=metas[i] or {},
+                        )
+                    )
+
+                if len(ids) < batch_size:
+                    break
+                offset += len(ids)
+
+            return results
+        except Exception as e:
+            raise VectorStoreError(f"Failed to fetch documents: {e}", cause=e)
+
     def delete_by_document(self, doc_id: str) -> int:
         try:
             results = self.collection.get(

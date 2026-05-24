@@ -35,8 +35,8 @@ class TestBM25RetrieverIndex:
 
     def test_empty_documents_dont_crash(self):
         retriever = BM25Retriever()
-        with pytest.raises(ZeroDivisionError):
-            retriever.index([], [])
+        retriever.index([], [])
+        assert retriever.is_indexed is False
 
     def test_is_indexed_flag(self):
         retriever = BM25Retriever()
@@ -94,3 +94,17 @@ class TestBM25RetrieverRebuild:
         assert len(retriever.documents) == 2
         assert retriever.documents == ["new doc one", "new doc two"]
         assert retriever.doc_ids == ["new_id1", "new_id2"]
+
+    def test_get_document_returns_content_and_metadata(self):
+        retriever = BM25Retriever()
+        retriever.index(
+            ["hello world"],
+            ["id1"],
+            [{"filename": "a.txt"}],
+        )
+
+        found = retriever.get_document("id1")
+        assert found is not None
+        content, metadata = found
+        assert content == "hello world"
+        assert metadata["filename"] == "a.txt"

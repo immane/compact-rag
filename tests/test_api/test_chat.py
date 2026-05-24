@@ -35,6 +35,21 @@ class MockPipeline:
             yield chunk
 
 
+class LegacyMockPipeline:
+    async def query(self, question, conversation_history=None, collection="default", top_k=10, stream=False):
+        return RAGResponse(
+            id="rag-legacy-001",
+            answer="legacy response",
+            citations=[],
+            token_usage={"total_tokens": 1},
+            retrieval_latency_ms=1,
+            generation_latency_ms=1,
+        )
+
+    async def query_stream(self, question, conversation_history=None, collection="default", top_k=10):
+        yield "legacy"
+
+
 @pytest.fixture
 def client(test_settings):
     _cached_settings.cache_clear()
@@ -95,3 +110,34 @@ class TestChatCompletions:
         assert "\\u4eba\\u5de5" in body
         assert "\\u667a\\u80fd" in body
         assert "data: [DONE]" in body
+
+    def test_empty_messages_returns_422(self, client):
+        request_body = {
+            "model": "gpt-4o-mini",
+            "messages": [],
+            "collection": "default",
+            "stream": False,
+        }
+
+        response = client.post("/v1/chat/completions", json=request_body)
+        assert response.status_code == 422
+
+
+def test_stream_falls_back_for_legacy_pipeline_signature(test_settings):
+    _cached_settings.cache_clear()
+    app = create_app(settings=test_settings)
+    app.dependency_overrides[get_rag_pipeline] = lambda: LegacyMockPipeline()
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/v1/chat/completions",
+            json={
+                "model": "gpt-4o-mini",
+                "messages": [{"role": "user", "content": "hi"}],
+                "collection": "default",
+                "stream": True,
+            },
+        )
+
+        assert response.status_code == 200
+        assert "legacy" in response.text

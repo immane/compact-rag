@@ -24,3 +24,7 @@ class DenseRetriever:
         if inspect.isawaitable(results):
             return await results
         return results
+
+    @property
+    def vector_store(self) -> VectorStore:
+        return self._vector_store
