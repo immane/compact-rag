@@ -232,6 +232,18 @@ pytest -m unit                  # 仅单元测试
 pytest -m slow                  # 慢速测试（需实际 LLM/Embedding 服务）
 ```
 
+### 本地 CI 等效命令
+
+下面的命令用来在本地复现 GitHub Actions 中的 lint 与测试流程：
+
+```bash
+make ci-install                 # 根据 CI 安装依赖（pip install -e "[dev]" + ruff）
+make ci-lint                    # ruff check + ruff format --check
+make ci-test                    # pytest --cov=...（生成 coverage.xml）
+make ci                         # ci-lint + ci-test
+make github-ci                  # 安装 + lint + tests（完整 CI 流程）
+```
+
 ## 🐳 Docker
 
 ```bash
