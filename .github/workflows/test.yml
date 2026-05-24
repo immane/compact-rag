@@ -34,6 +34,10 @@ jobs:
           ruff check src/compact_rag/
           ruff format --check src/compact_rag/
 
+      - name: Run migrations
+        run: |
+          alembic -c alembic.ini upgrade head
+
       - name: Test with coverage
         run: |
           pytest --cov=src/compact_rag --cov-report=term-missing --cov-report=xml -v
