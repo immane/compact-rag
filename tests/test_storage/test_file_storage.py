@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-import os
 
 import pytest
 
-from compact_rag.common.exceptions import FileNotFoundError, StorageBackendError
+from compact_rag.common.exceptions import FileNotFoundError
 from compact_rag.storage.file_storage import (
     LocalFileBackend,
     TempFileCleaner,
     build_storage_key,
-    get_storage_backend,
 )
 
 

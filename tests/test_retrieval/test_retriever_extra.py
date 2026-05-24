@@ -7,7 +7,6 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from compact_rag.config.settings import RetrievalSettings
-from compact_rag.retrieval.query_transformer import QueryTransformer
 from compact_rag.retrieval.retriever import HybridRetriever
 from compact_rag.retrieval.sparse import BM25Retriever
 from compact_rag.storage.schema import SearchResult

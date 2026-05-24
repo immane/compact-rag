@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
 
-from compact_rag.api.deps import _cached_settings, get_storage_backend
+from compact_rag.api.deps import _cached_settings
 from compact_rag.api.router import create_app
-from compact_rag.common.exceptions import FileNotFoundError as StorageFileNotFoundError
-from compact_rag.storage.file_storage import LocalFileBackend, TempFileCleaner
+from compact_rag.storage.file_storage import LocalFileBackend
 
 
 @pytest.fixture
@@ -45,8 +44,6 @@ class TestFileRedirect:
     def test_file_download_nonexistent_raises_404(self, client):
         """Non-existent file returns 404."""
         from compact_rag.api.routers import system as system_router
-
-        orig_override = client.app.dependency_overrides.get(system_router.get_storage_backend)
 
         class FakeNotFoundBackend:
             async def exists(self, remote_key: str) -> bool:

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pytest
 
 from compact_rag.ingestion.chunker import (
     RecursiveCharacterTextSplitter,

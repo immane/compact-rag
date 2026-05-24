@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pytest
 
 from compact_rag.retrieval.fusion import rrf_fusion, rsf_fusion
 from compact_rag.storage.schema import SearchResult

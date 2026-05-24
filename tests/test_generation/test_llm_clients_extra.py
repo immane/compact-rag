@@ -7,11 +7,11 @@ import asyncio
 import builtins
 import sys
 from types import ModuleType
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 
-from compact_rag.common.exceptions import LLMServiceError, LLMTimeoutError
+from compact_rag.common.exceptions import LLMTimeoutError
 from compact_rag.generation.llm import (
     AnthropicClient,
     OllamaClient,
@@ -201,7 +201,6 @@ class TestOllamaStreamHTTPerrors:
     @pytest.mark.asyncio
     async def test_http_stream_json_decode_error_skipped(self, monkeypatch):
         """HTTP stream lines with JSONDecodeError are skipped (continue)."""
-        import httpx as real_httpx
 
         original_import = builtins.__import__
 

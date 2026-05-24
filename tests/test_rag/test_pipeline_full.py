@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 from compact_rag.generation.prompt import PromptManager
 from compact_rag.rag.pipeline import RAGPipeline
@@ -465,7 +465,7 @@ class TestQueryStream:
     async def test_yields_string_chunks(self):
         pipeline = RAGPipeline(
             retriever=FakeRetriever(),
-            llm_client=FakeLLM(chunks := ["chunk1", "chunk2", "chunk3"]),
+            llm_client=FakeLLM(["chunk1", "chunk2", "chunk3"]),
             prompt_manager=PromptManager(),
         )
 

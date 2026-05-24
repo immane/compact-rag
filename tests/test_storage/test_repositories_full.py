@@ -7,17 +7,12 @@ generic BaseRepository methods and all specialized repository methods.
 from __future__ import annotations
 
 import pytest
-from sqlalchemy import select
 
 from compact_rag.storage.db.models import (
-    ApiKey,
     Collection,
-    Conversation,
     Document,
     DocumentChunk,
-    IngestionJob,
     Message,
-    StorageFile,
 )
 from compact_rag.storage.db.repository.api_key import ApiKeyRepository
 from compact_rag.storage.db.repository.chunk import ChunkRepository
@@ -351,7 +346,7 @@ class TestDocumentRepositoryExtended:
             test_session, collection_id=col1.id, filename="ca.pdf",
             file_type="pdf", file_size=10, file_hash="cha1",
         )
-        doc_b = await repo.create(
+        await repo.create(
             test_session, collection_id=col2.id, filename="cb.pdf",
             file_type="pdf", file_size=10, file_hash="chb1",
         )

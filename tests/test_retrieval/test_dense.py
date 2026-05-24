@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
-import numpy as np
 import pytest
 
 from compact_rag.retrieval.dense import DenseRetriever
@@ -61,7 +60,7 @@ class TestDenseRetriever:
         mock_vs.search = AsyncMock(return_value=[])
 
         retriever = DenseRetriever(mock_vs)
-        results = await retriever.search("")
+        await retriever.search("")
 
         mock_vs.search.assert_called_once_with("", top_k=100, where=None)
 

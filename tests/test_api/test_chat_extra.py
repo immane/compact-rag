@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from unittest.mock import AsyncMock
 
 import pytest
@@ -10,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from compact_rag.api.deps import _cached_settings, get_rag_pipeline
 from compact_rag.api.router import create_app
-from compact_rag.storage.schema import RAGCitation, RAGResponse
+from compact_rag.storage.schema import RAGResponse
 
 
 class _CompatTypeErrorPipeline:

@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import json
 
-import pytest
 
-from compact_rag.tool import builtin
 from compact_rag.tool.builtin import (
     RAG_TOOLS,
     ToolRegistry,

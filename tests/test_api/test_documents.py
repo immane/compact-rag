@@ -9,7 +9,7 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
-from compact_rag.api.deps import _cached_settings, get_db_session, get_settings, get_storage_backend
+from compact_rag.api.deps import _cached_settings, get_db_session, get_storage_backend
 from compact_rag.api.router import create_app
 
 

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pytest
 
 from compact_rag.ingestion.loader import _docx_table_to_markdown
 from compact_rag.ingestion.table_extractor import (

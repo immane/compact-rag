@@ -4,7 +4,7 @@ import asyncio
 import builtins
 import sys
 from types import ModuleType
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -256,7 +256,7 @@ class TestLLMFactory:
 
     def test_passes_timeout_to_client(self, mock_openai):
         settings = LLMSettings(provider="openai", model="gpt-4o-mini", timeout=15)
-        client = LLMFactory.create(settings)
+        LLMFactory.create(settings)
         mock_openai.assert_called_once()
         _, kwargs = mock_openai.call_args
         assert kwargs.get("timeout") == 15
@@ -1229,7 +1229,6 @@ class TestOllamaClientSDK:
     @pytest.mark.asyncio
     async def test_stream_http_fallback_with_lines(self, monkeypatch, block_ollama_import):
         """Stream with HTTP fallback: yields content from streaming lines."""
-        import httpx as real_httpx
 
         class FakeStreamResponse:
             status_code = 200

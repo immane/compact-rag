@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,22 +19,12 @@ from compact_rag.api.deps import (
     get_storage_backend,
     get_vector_store,
 )
-from compact_rag.config.settings import (
-    ChromaDBSettings,
-    DatabaseSettings,
-    EmbeddingSettings,
-    LLMSettings,
-    RetrievalSettings,
-    Settings,
-    StorageSettings,
-)
 from compact_rag.embedding.service import EmbeddingService
 from compact_rag.generation.llm import OpenAIClient
 from compact_rag.generation.prompt import PromptManager
 from compact_rag.rag.pipeline import RAGPipeline
 from compact_rag.retrieval.retriever import HybridRetriever
-from compact_rag.storage.db.engine import create_engine, get_session
-from compact_rag.storage.file_storage import LocalFileBackend, get_storage_backend as _get_storage_backend
+from compact_rag.storage.file_storage import LocalFileBackend
 from compact_rag.storage.vector_store import VectorStore
 
 

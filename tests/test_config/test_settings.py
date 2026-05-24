@@ -1,11 +1,7 @@
 from __future__ import annotations
 
-import os
 
-import pytest
-import yaml
 
-from compact_rag.common.exceptions import ConfigurationError
 from compact_rag.config.settings import (
     Settings,
     _deep_merge,

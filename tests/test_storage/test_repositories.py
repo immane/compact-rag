@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 import pytest
-from sqlalchemy import select
 
 from compact_rag.storage.db.models import (
     Collection,
-    Conversation,
     Document,
     DocumentChunk,
-    Message,
 )
 from compact_rag.storage.db.repository.collection import CollectionRepository
 from compact_rag.storage.db.repository.chunk import ChunkRepository

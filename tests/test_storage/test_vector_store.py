@@ -3,9 +3,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import numpy as np
-import pytest
 
-from compact_rag.storage.schema import DocumentChunk, SearchResult
+from compact_rag.storage.schema import SearchResult
 from compact_rag.storage.vector_store import VectorStore
 
 
