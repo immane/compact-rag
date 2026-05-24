@@ -163,9 +163,11 @@ class Settings(BaseSettings):
         Priority (highest to lowest):
         1. Environment variables (COMPACT_RAG_* prefix)
         2. .env file
-        3. config/production.yaml (if exists and not overridden)
+        3. Specified config file (--config / COMPACT_RAG_CONFIG)
         4. config/default.yaml
         5. Pydantic model defaults
+
+        To use production config: COMPACT_RAG_CONFIG=config/production.yaml
 
         Args:
             config_path: Path to YAML config file. If None, reads from
@@ -194,7 +196,6 @@ class Settings(BaseSettings):
             pass
 
         # Determine config file path
-        explicitly_specified = config_path is not None
         if config_path is None:
             config_path = os.environ.get("COMPACT_RAG_CONFIG", "config/default.yaml")
 
@@ -204,14 +205,6 @@ class Settings(BaseSettings):
         if default_path.exists():
             with open(default_path) as f:
                 merged = yaml.safe_load(f) or {}
-
-        # Auto-load production.yaml overlay only when no explicit config was given
-        if not explicitly_specified:
-            prod_path = _resolve_config("config/production.yaml")
-            if prod_path.exists() and prod_path != default_path:
-                with open(prod_path) as f:
-                    prod_overlay = yaml.safe_load(f) or {}
-                _deep_merge(merged, prod_overlay)
 
         # Load specified config (overrides defaults + production)
         specified_path = _resolve_config(config_path)

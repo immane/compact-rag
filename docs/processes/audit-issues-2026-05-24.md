@@ -3,13 +3,13 @@
 > **审计日期**: 2026-05-24  
 > **审计基准**: `docs/design/CONTRACTS.md` v1.0 + `docs/design/DESIGN.md` v1.2  
 > **审计范围**: 全部源代码 (15 模块, 9 子 agent 并行扫描)  
-> **发现问题总数**: ~55 项
+> **已修复**: 22 项 | **待修复**: ~33 项
 
 ---
 
-## 🔴 严重问题 (会导致运行时错误) — 5 项
+## 🔴 严重问题 — ~~5 项~~ 0 待修
 
-### #1 RAG Pipeline 调用不存在的 `tool_engine.execute()` 方法
+### ~~#1 RAG Pipeline 调用不存在的 `tool_engine.execute()` 方法~~ ✅ 已修复
 
 - **文件**: `src/compact_rag/rag/pipeline.py:53,133`
 - **契约引用**: CONTRACTS 1.6 — `ToolEngine` 方法: `execute_tool_call()`, `run_loop()`, `get_openai_tools()`
@@ -29,7 +29,7 @@
 
 ---
 
-### #2 AnthropicClient 将 OpenAI 格式 tools 直接透传给 Anthropic SDK
+### ~~#2 AnthropicClient 将 OpenAI 格式 tools 直接透传给 Anthropic SDK~~ ✅ 已修复
 
 - **文件**: `src/compact_rag/generation/llm.py:208-209`
 - **契约引用**: CONTRACTS 1.5 — `AnthropicClient` 必须支持 tool calling
@@ -50,7 +50,7 @@
 
 ---
 
-### #3 无 API Key 认证中间件
+### ~~#3 无 API Key 认证中间件~~ ✅ 已修复
 
 - **文件**: `src/compact_rag/api/deps.py`, `src/compact_rag/api/router.py:50-57`
 - **契约引用**: CONTRACTS 3.1 — 端点表中的"建议/可选"认证列
@@ -59,7 +59,7 @@
 
 ---
 
-### #4 SSE 流式最终块缺少 citations
+### ~~#4 SSE 流式最终块缺少 citations~~ ✅ 已修复
 
 - **文件**: `src/compact_rag/api/routers/chat.py:131`
 - **契约引用**: CONTRACTS 3.6 — 最终 SSE delta 块必须包含 `"citations":[...]`
@@ -71,7 +71,7 @@
 
 ---
 
-### #5 citations 使用 chroma_id 而非实际文档 ID
+### ~~#5 citations 使用 chroma_id 而非实际文档 ID~~ ✅ 已修复
 
 - **文件**: `src/compact_rag/rag/pipeline.py:231`
 - **契约引用**: CONTRACTS 2.2 + 4.1 — `RAGCitation.doc_id` 应为文档 ID，ChromaDB metadata 中分别保存 `doc_id` 和 `chroma_id`
@@ -83,9 +83,9 @@
 
 ---
 
-## 🟠 高优先级问题 (功能缺失/关键偏差) — 12 项
+## 🟠 高优先级问题 — ~~12 项~~ 7 待修
 
-### #6 SemanticChunker 语义分块是空桩
+### ~~#6 SemanticChunker 语义分块是空桩~~ ✅ 已修复
 
 - **文件**: `src/compact_rag/ingestion/chunker.py:167-193`
 - **契约引用**: DESIGN 5.4 — "基于 embedding 相似度阈值检测断点"
@@ -130,7 +130,7 @@
 
 ---
 
-### #11 query_stream() 构建了 citations 但从未 yield
+### ~~#11 query_stream() 构建了 citations 但从未 yield~~ ✅ 已修复 (与 #4 联动)
 
 - **文件**: `src/compact_rag/rag/pipeline.py:153-174`
 - **契约引用**: CONTRACTS 3.6 — SSE 中需要 citations
@@ -148,7 +148,7 @@
 
 ---
 
-### #13 LLMFactory 忽略 settings.api_key
+### ~~#13 LLMFactory 忽略 settings.api_key~~ ✅ 已修复
 
 - **文件**: `src/compact_rag/generation/llm.py:621-641`
 - **契约引用**: CONTRACTS 2.1 — `LLMSettings.api_key: Optional[str]`（可编程设置）
@@ -160,7 +160,7 @@
 
 ---
 
-### #14 config/default.yaml 包含非规范默认值
+### ~~#14 config/default.yaml 包含非规范默认值~~ ✅ 已修复
 
 - **文件**: `config/default.yaml:33-36`
 - **契约引用**: CONTRACTS 5.5 — `model: "gpt-4o-mini"`, `max_tokens: 2048`
@@ -169,12 +169,12 @@
 
 ---
 
-### #15 production.yaml 自动加载逻辑未实现
+### ~~#15 production.yaml 自动加载逻辑未实现~~ ✅ 已修复（移除自动加载，改为文档说明显式指定）
 
 - **文件**: `src/compact_rag/config/settings.py:157-158`
 - **契约引用**: CONTRACTS 5.1 — 优先级链中 `production.yaml` 应在 `.env` 与 `default.yaml` 之间
 - **问题**: 代码注释说会检查 `production.yaml` 存在即自动加载，但实际 `load()` 方法中无此逻辑。
-- **修复方案**: 添加 auto-load 逻辑或更新注释/契约。
+- **最终方案**: 不自动加载生产配置（避免 CI 环境意外覆盖 SQLite→MySQL），通过 `COMPACT_RAG_CONFIG=config/production.yaml` 显式指定。已更新注释和优先级文档。
 
 ---
 
@@ -213,9 +213,9 @@
 
 ---
 
-## 🟡 中优先级问题 (类型安全/设计偏差) — 16 项
+## 🟡 中优先级问题 — ~~16 项~~ 8 待修
 
-### #18 RAG_CONTEXT 模板从未被使用
+### ~~#18 RAG_CONTEXT 模板从未被使用~~ ✅ 已修复
 
 - **文件**: `src/compact_rag/rag/pipeline.py:186-194` vs `src/compact_rag/generation/prompt.py:19-27`
 - **问题**: `prompt.py` 中定义了 `_DEFAULT_RAG_CONTEXT` Jinja2 模板和 `render_rag_context()` 方法，但 `_build_context()` 用手写的字符串拼接代替。模板成为死代码。
@@ -223,7 +223,7 @@
 
 ---
 
-### #19 render_system_prompt 未传 collections
+### ~~#19 render_system_prompt 未传 collections~~ ✅ 已修复
 
 - **文件**: `src/compact_rag/rag/pipeline.py:177`
 - **问题**: 模板包含 `{{ collections | join(", ") }}` 占位符，但调用时未传参，导致输出"可用集合："后为空。
@@ -231,7 +231,7 @@
 
 ---
 
-### #20 IngestionResult.status 使用 str 而非 Literal
+### ~~#20 IngestionResult.status 使用 str 而非 Literal~~ ✅ 已修复
 
 - **文件**: `src/compact_rag/storage/schema.py:34`
 - **问题**: `status: str  # completed | skipped | failed` 应改为 `status: Literal["completed", "skipped", "failed"]`。
@@ -255,7 +255,7 @@
 
 ---
 
-### #23 RRF k 参数不可通过 settings 配置
+### ~~#23 RRF k 参数不可通过 settings 配置~~ ✅ 已修复
 
 - **文件**: `src/compact_rag/retrieval/retriever.py:62-65`
 - **问题**: RRF k 参数依赖 `fusion.py` 中的默认值 `k=60`，未通过 `RetrievalSettings` 暴露为可配置项。
@@ -263,7 +263,7 @@
 
 ---
 
-### #24 Tool._build_schema 不处理 Optional/Union 类型
+### ~~#24 Tool._build_schema 不处理 Optional/Union 类型~~ ✅ 已修复
 
 - **文件**: `src/compact_rag/tool/schema.py:36-37`
 - **问题**: `_TYPE_MAP` 无法处理 `Optional[int]` → `int | None`，会回退为 `"string"`。导致 LLM 收到错误的参数类型。
@@ -287,7 +287,7 @@
 
 ---
 
-### #27 chunk_size >= chunk_overlap 未强制
+### ~~#27 chunk_size >= chunk_overlap 未强制~~ ✅ 已修复
 
 - **文件**: `src/compact_rag/config/settings.py:55-61`
 - **问题**: `IngestionSettings` 缺少 Pydantic validator 来强制 `chunk_size >= chunk_overlap`。用户可能设置 `chunk_size=100, chunk_overlap=200` 导致异常。
@@ -295,7 +295,7 @@
 
 ---
 
-### #28 ingest_directory 不支持 force
+### ~~#28 ingest_directory 不支持 force~~ ✅ 已修复
 
 - **文件**: `src/compact_rag/ingestion/pipeline.py:284`
 - **问题**: `ingest_directory()` 调用 `ingest_file()` 时不传 `force`，无法强制重新摄入整个目录。
@@ -303,7 +303,7 @@
 
 ---
 
-### #29 _get_session 每次创建新 engine
+### ~~#29 _get_session 每次创建新 engine~~ ✅ 已修复
 
 - **文件**: `src/compact_rag/ingestion/pipeline.py:374-381`
 - **问题**: 每次调用 `_get_session()` 都执行 `create_engine()` + `create_session_factory()` + `factory()`，创建新的 engine 实例和连接池，可能导致 MySQL 连接池耗尽。
@@ -311,7 +311,7 @@
 
 ---
 
-### #30 缺少通用异常处理器
+### ~~#30 缺少通用异常处理器~~ ✅ 已修复
 
 - **文件**: `src/compact_rag/api/router.py:60`
 - **问题**: 仅注册了 `CompactRAGException` 的异常处理器。其他异常（`ValueError`, `KeyError`, `HTTPException`, `ValidationError`）将使用 FastAPI 默认格式，不符合契约统一错误格式 `{error:{code,message,details,request_id}}`。
@@ -319,7 +319,7 @@
 
 ---
 
-### #31 /v1/info 硬编码 embedding_dimension
+### ~~#31 /v1/info 硬编码 embedding_dimension~~ ✅ 已修复
 
 - **文件**: `src/compact_rag/api/routers/system.py:87`
 - **问题**: `embedding_dimension=384` 硬编码。如果加载 BGE-base（768 维）等模型，返回值将不正确。
@@ -335,7 +335,7 @@
 
 ---
 
-### #33 Admin 缺少 get_version() 和侧边栏版本
+### ~~#33 Admin 缺少 get_version() 和侧边栏版本~~ ✅ 已修复
 
 - **文件**: `src/compact_rag/admin/app.py`
 - **问题**: 契约要求侧边栏显示 `f"版本: {get_version()}"`，但该函数和 UI 元素均不存在。
@@ -363,7 +363,7 @@
 | 47 | `api/routers/conversations.py:55` | 路径参数 `{conv_id}` 而非契约的 `{id}` |
 | 48 | `api/routers/ingestion.py:64` | 路径参数 `{job_id}` 而非契约的 `{id}` |
 | 49 | `api/routers/api_keys.py:99` | 路径参数 `{key_id}` 而非契约的 `{id}` |
-| 50 | `api/schemas.py:232` | `HealthResponse` 默认值 `"degraded"` 而非 `"ok"` |
+| 50 | `api/schemas.py:232` | ~~`HealthResponse` 默认值 `"degraded"` 而非 `"ok"`~~ ✅ 已修复 |
 | 51 | `admin/client.py:24` | 默认 `base_url` 用 `127.0.0.1` 而非 `localhost` |
 | 52 | `admin/client.py:122` | `upload_document` 接收 `bytes` 非 `file_path` |
 | 53 | `admin/app.py` | 无 `main()` 函数包装 |
@@ -409,11 +409,13 @@
 
 ## 修复优先级建议
 
-| 优先级 | 问题编号 | 预计工时 | 说明 |
-|--------|---------|---------|------|
-| **P0 (立即)** | #1, #3 | 2-4h | 运行时崩溃 + 安全漏洞 |
-| **P0 (立即)** | #2, #5 | 2-3h | 功能不可用 + 数据错误 |
-| **P1 (本周)** | #6, #7, #8, #10, #11, #16 | 8-16h | 核心功能缺失 + 契约严重偏差 |
-| **P1 (本周)** | #12, #13, #14, #15 | 3-5h | 技术栈/配置规范的偏差 |
-| **P2 (下一轮)** | #4, #9, #17-#33 | 12-20h | 类型安全 + 设计偏差 |
-| **P3 (后续)** | #34-#55 | 8-12h | 风格/命名/文档一致性 |
+| 优先级 | 问题编号 | 说明 |
+|--------|---------|------|
+| **P0 (已完成)** | #1, #2, #3, #4, #5 | 运行时崩溃 + 安全漏洞 + 数据错误 ✅ |
+| **P1 (已完成)** | #6, #13, #14, #15 | 功能缺失 + 配置规范 ✅ |
+| **P1 (已完成)** | #18, #19, #20 | 模板/参数/类型安全 ✅ |
+| **P1 (待修)** | #7, #8, #10, #11, #12, #16 | 核心功能缺失 + 契约偏差 |
+| **P2 (已完成)** | #23, #24, #27, #28, #29, #30, #31, #33 | 中优先级逻辑修复 ✅ |
+| **P2 (待修)** | #9, #17, #21, #22, #25, #26, #32 | 存根实现 + fixtures + 设计偏差 |
+| **P3 (已完成)** | #50 | 低优先级默认值 ✅ |
+| **P3 (待修)** | #34-49, #51-55 | 风格/命名/文档一致性 |
