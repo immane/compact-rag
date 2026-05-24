@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import time
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
@@ -19,9 +20,31 @@ from compact_rag.api.schemas import (
 )
 from compact_rag.common.logger import get_logger
 from compact_rag.rag.pipeline import RAGPipeline
+from compact_rag.storage.db.models import Conversation
 
 logger = get_logger(__name__)
 router = APIRouter(tags=["Chat"])
+
+
+async def _ensure_conversation(
+    session: AsyncSession,
+    conversation_id: str | None,
+    model: str,
+    collection: str,
+    title: str,
+) -> str:
+    if conversation_id:
+        return conversation_id
+
+    conv = Conversation(
+        id=str(uuid4()),
+        collection_id=collection if collection != "default" else None,
+        title=title,
+        model=model,
+    )
+    session.add(conv)
+    await session.flush()
+    return conv.id
 
 
 @router.post("/chat/completions", response_model=ChatCompletionResponse)
@@ -35,9 +58,18 @@ async def chat_completions(
 
     messages = [{"role": m.role, "content": m.content} for m in request.messages]
 
+    first_user_text = messages[-1]["content"][:100] if messages else "New Conversation"
+    conversation_id = await _ensure_conversation(
+        session,
+        request.conversation_id,
+        request.model,
+        request.collection,
+        first_user_text,
+    )
+
     if request.stream:
         return StreamingResponse(
-            _stream_response(call_id, request, pipeline, messages),
+            _stream_response(call_id, request, pipeline, messages, session, conversation_id),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
@@ -46,12 +78,14 @@ async def chat_completions(
             },
         )
 
-    response = await _query_with_compat(pipeline, request, messages)
+    response = await _query_with_compat(pipeline, request, messages, session, conversation_id)
+    await session.commit()
 
     return ChatCompletionResponse(
         id=call_id,
         created=int(time.time()),
         model=request.model,
+        conversation_id=conversation_id,
         choices=[
             ChatChoice(
                 index=0,
@@ -82,20 +116,25 @@ async def _stream_response(
     request: ChatCompletionRequest,
     pipeline: RAGPipeline,
     messages: list[dict],
+    session: AsyncSession,
+    conversation_id: str,
 ):
     """Generate SSE stream for chat response."""
     try:
         # Send initial chunk
         yield f"data: {json.dumps({'id': call_id, 'object': 'chat.completion.chunk', 'created': int(time.time()), 'model': request.model, 'choices': [{'index': 0, 'delta': {'role': 'assistant'}, 'finish_reason': None}]})}\n\n"
 
-        async for chunk in _query_stream_with_compat(pipeline, request, messages):
+        async for chunk in _query_stream_with_compat(pipeline, request, messages, session, conversation_id):
             yield f"data: {json.dumps({'id': call_id, 'object': 'chat.completion.chunk', 'created': int(time.time()), 'model': request.model, 'choices': [{'index': 0, 'delta': {'content': chunk}, 'finish_reason': None}]})}\n\n"
 
         # Send finish
         yield f"data: {json.dumps({'id': call_id, 'object': 'chat.completion.chunk', 'created': int(time.time()), 'model': request.model, 'choices': [{'index': 0, 'delta': {}, 'finish_reason': 'stop'}]})}\n\n"
         yield "data: [DONE]\n\n"
 
+        await session.commit()
+
     except Exception as e:
+        await session.rollback()
         logger.exception("Stream error")
         yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
@@ -112,6 +151,8 @@ async def _query_with_compat(
     pipeline: RAGPipeline,
     request: ChatCompletionRequest,
     messages: list[dict],
+    session: AsyncSession,
+    conversation_id: str,
 ):
     question = messages[-1]["content"]
     history = messages[:-1] if len(messages) > 1 else None
@@ -125,6 +166,8 @@ async def _query_with_compat(
             use_hybrid_search=request.retrieval.hybrid_search,
             use_rerank=request.retrieval.rerank,
             stream=False,
+            conversation_id=conversation_id,
+            db_session=session,
         )
     except TypeError as e:
         if not _is_signature_compat_error(e):
@@ -139,6 +182,8 @@ async def _query_with_compat(
             collection=request.collection,
             top_k=request.retrieval.top_k,
             stream=False,
+            conversation_id=conversation_id,
+            db_session=session,
         )
     except Exception:
         logger.exception("RAG query failed")
@@ -149,6 +194,8 @@ async def _query_stream_with_compat(
     pipeline: RAGPipeline,
     request: ChatCompletionRequest,
     messages: list[dict],
+    session: AsyncSession,
+    conversation_id: str,
 ):
     question = messages[-1]["content"]
     history = messages[:-1] if len(messages) > 1 else None
@@ -161,6 +208,8 @@ async def _query_stream_with_compat(
             top_k=request.retrieval.top_k,
             use_hybrid_search=request.retrieval.hybrid_search,
             use_rerank=request.retrieval.rerank,
+            conversation_id=conversation_id,
+            db_session=session,
         ):
             yield chunk
     except TypeError as e:
@@ -175,5 +224,7 @@ async def _query_stream_with_compat(
             conversation_history=history,
             collection=request.collection,
             top_k=request.retrieval.top_k,
+            conversation_id=conversation_id,
+            db_session=session,
         ):
             yield chunk

@@ -82,6 +82,7 @@ class ChatCompletionResponse(BaseModel):
     model: str = ""
     choices: list[ChatChoice] = Field(default_factory=list)
     usage: UsageInfo = Field(default_factory=UsageInfo)
+    conversation_id: str | None = None
 
 
 # ── Collections ────────────────────────────────────────────────

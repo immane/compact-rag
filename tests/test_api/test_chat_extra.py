@@ -141,7 +141,7 @@ class TestChatCompatFallback:
         _cached_settings.cache_clear()
 
         class NonCompatPipeline:
-            async def query(self, question, conversation_history=None, collection="default", top_k=10, stream=False, use_hybrid_search=True, use_rerank=True):
+            async def query(self, question, conversation_history=None, collection="default", top_k=10, stream=False, use_hybrid_search=True, use_rerank=True, conversation_id=None, db_session=None):
                 raise RuntimeError("pipeline runtime failure")
 
         p = NonCompatPipeline()
@@ -166,7 +166,7 @@ class TestStreamResponse:
         _cached_settings.cache_clear()
 
         class ModelStreamPipeline:
-            async def query_stream(self, question, conversation_history=None, collection="default", top_k=10, use_hybrid_search=True, use_rerank=True):
+            async def query_stream(self, question, conversation_history=None, collection="default", top_k=10, use_hybrid_search=True, use_rerank=True, conversation_id=None, db_session=None):
                 yield "The model says: "
                 yield "AI is the future."
 
@@ -263,7 +263,7 @@ class TestQueryWithCompatError:
         _cached_settings.cache_clear()
 
         class ErrorPipeline:
-            async def query(self, question, conversation_history=None, collection="default", top_k=10, stream=False, use_hybrid_search=True, use_rerank=True):
+            async def query(self, question, conversation_history=None, collection="default", top_k=10, stream=False, use_hybrid_search=True, use_rerank=True, conversation_id=None, db_session=None):
                 raise RuntimeError("pipeline runtime error")
 
         p = ErrorPipeline()

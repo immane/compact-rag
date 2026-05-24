@@ -94,9 +94,15 @@ def get_hybrid_retriever():
 def get_rag_pipeline():
     """Get full RAG pipeline instance."""
     from compact_rag.rag.pipeline import RAGPipeline
+    from compact_rag.storage.db.repository.conversation import (
+        ConversationRepository,
+        MessageRepository,
+    )
 
     return RAGPipeline(
         retriever=get_hybrid_retriever(),
         llm_client=get_llm_client(),
         prompt_manager=get_prompt_manager(),
+        conversation_repo=ConversationRepository(),
+        message_repo=MessageRepository(),
     )

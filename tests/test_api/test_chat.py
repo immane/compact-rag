@@ -46,7 +46,7 @@ class LegacyMockPipeline:
             generation_latency_ms=1,
         )
 
-    async def query_stream(self, question, conversation_history=None, collection="default", top_k=10):
+    async def query_stream(self, question, conversation_history=None, collection="default", top_k=10, **kwargs):
         yield "legacy"
 
 

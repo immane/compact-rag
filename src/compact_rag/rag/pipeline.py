@@ -41,6 +41,7 @@ class RAGPipeline:
         use_hybrid_search: bool = True,
         use_rerank: bool = True,
         conversation_id: str | None = None,
+        db_session=None,
     ) -> Any:
         t_start = time.perf_counter()
 
@@ -91,9 +92,10 @@ class RAGPipeline:
         else:
             token_usage = {}
 
-        if self.conversation_repo is not None and conversation_id:
+        if self.conversation_repo is not None and db_session is not None and conversation_id:
             try:
                 await self._save_conversation(
+                    db_session,
                     conversation_id,
                     question,
                     answer,
@@ -122,6 +124,7 @@ class RAGPipeline:
         use_hybrid_search: bool = True,
         use_rerank: bool = True,
         conversation_id: str | None = None,
+        db_session=None,
     ) -> AsyncGenerator[str, None]:
         messages = self._build_messages(question, conversation_history or [])
 
@@ -156,9 +159,10 @@ class RAGPipeline:
 
         citations = self._build_citations(retrieved)
 
-        if self.conversation_repo is not None and conversation_id:
+        if self.conversation_repo is not None and db_session is not None and conversation_id:
             try:
                 await self._save_conversation(
+                    db_session,
                     conversation_id,
                     question,
                     full_answer,
@@ -240,6 +244,7 @@ class RAGPipeline:
 
     async def _save_conversation(
         self,
+        db_session,
         conversation_id: str,
         question: str,
         answer: str,
@@ -260,13 +265,13 @@ class RAGPipeline:
         ]
         try:
             await self.message_repo.create(
-                None,
+                db_session,
                 conversation_id=conversation_id,
                 role="user",
                 content=question,
             )
             await self.message_repo.create(
-                None,
+                db_session,
                 conversation_id=conversation_id,
                 role="assistant",
                 content=answer,
@@ -275,7 +280,7 @@ class RAGPipeline:
                 latency_ms=int(latency_ms),
             )
             await self.conversation_repo.increment_message_count(
-                None, conversation_id, 2
+                db_session, conversation_id, 2
             )
         except Exception as e:
             logger.warning("Failed to persist conversation turn", error=str(e))

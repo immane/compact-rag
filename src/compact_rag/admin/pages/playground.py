@@ -31,7 +31,7 @@ def render(client: AdminAPIClient) -> None:
         use_hybrid = st.toggle("Hybrid Search", value=True, key="pg_hybrid")
         use_rerank = st.toggle("Rerank", value=True, key="pg_rerank")
         temperature = st.slider("Temperature", 0.0, 2.0, 0.1, 0.05, key="pg_temp")
-        use_stream = st.toggle("Streaming", value=False, key="pg_stream")
+        use_stream = st.toggle("Streaming", value=True, key="pg_stream")
 
         if st.button("🗑️ Clear Chat", use_container_width=True):
             st.session_state.chat_messages = []
@@ -66,14 +66,19 @@ def render(client: AdminAPIClient) -> None:
                 placeholder = st.empty()
                 full_content = ""
                 try:
-                    for chunk in client.chat_stream(
-                        messages=api_messages,
-                        collection=collection,
-                        top_k=top_k,
-                        temperature=temperature,
-                        use_rerank=use_rerank,
-                        use_hybrid=use_hybrid,
-                    ):
+                    with st.spinner("Thinking..."):
+                        chunk_iter = client.chat_stream(
+                            messages=api_messages,
+                            collection=collection,
+                            top_k=top_k,
+                            temperature=temperature,
+                            use_rerank=use_rerank,
+                            use_hybrid=use_hybrid,
+                        )
+                        first_chunk = next(chunk_iter, "")
+                    full_content = first_chunk
+                    placeholder.markdown(full_content + "▌")
+                    for chunk in chunk_iter:
                         full_content += chunk
                         placeholder.markdown(full_content + "▌")
                     placeholder.markdown(full_content)

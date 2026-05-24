@@ -246,7 +246,7 @@ class TestRAGPipelineQuery:
             conversation_repo=conv_repo,
             message_repo=msg_repo,
         )
-        await pipeline.query(question="save this", conversation_id="conv-1")
+        await pipeline.query(question="save this", conversation_id="conv-1", db_session=MagicMock())
 
         assert len(msg_repo.created_messages) == 2
         roles = [m["role"] for m in msg_repo.created_messages]
@@ -507,7 +507,7 @@ class TestQueryStream:
             message_repo=msg_repo,
         )
         chunks = []
-        async for chunk in pipeline.query_stream(question="stream save", conversation_id="c1"):
+        async for chunk in pipeline.query_stream(question="stream save", conversation_id="c1", db_session=MagicMock()):
             chunks.append(chunk)
 
         assert chunks == ["a", "b"]
