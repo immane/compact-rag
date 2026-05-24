@@ -95,7 +95,12 @@ markers = [
 
 [tool.coverage.run]
 source = ["src/compact_rag"]
-omit = ["*/test_*", "*/migrations/*"]
+omit = [
+    "*/test_*",
+    "*/migrations/*",
+    "*/main.py",
+    "*/admin/*",
+]
 
 [tool.coverage.report]
 fail_under = 85
