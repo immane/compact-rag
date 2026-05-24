@@ -24,7 +24,7 @@ def serve(
     from compact_rag.config.settings import get_settings
 
     _settings = get_settings(config)
-    fastapi_app = create_app(settings)
+    fastapi_app = create_app(_settings)
 
     import uvicorn
 
@@ -33,7 +33,7 @@ def serve(
         host=host,
         port=port,
         reload=reload,
-        log_level=settings.log_level.lower(),
+        log_level=_settings.log_level.lower(),
     )
 
 
@@ -54,7 +54,7 @@ def admin(
 
     from compact_rag.config.settings import get_settings
 
-    settings = get_settings(config)
+    _settings = get_settings(config)
     admin_path = "src/compact_rag/admin/app.py"
 
     cmd = [
