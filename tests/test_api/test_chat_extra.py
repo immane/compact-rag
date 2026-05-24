@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import AsyncMock
 
 import pytest
@@ -10,6 +11,7 @@ from fastapi.testclient import TestClient
 from compact_rag.api.deps import _cached_settings, get_rag_pipeline
 from compact_rag.api.router import create_app
 from compact_rag.storage.schema import RAGResponse
+from tests.conftest import _init_test_db, patch_cached_settings
 
 
 class _CompatTypeErrorPipeline:
@@ -81,14 +83,16 @@ class _LegacyStreamPipeline:
 
 
 @pytest.fixture
-def client_factory(test_settings):
+def client_factory(test_settings, monkeypatch):
     """Create a test client with a given pipeline override."""
+    patch_cached_settings(monkeypatch, test_settings)
+    asyncio.run(_init_test_db(test_settings.database.url))
+
     app = None
     client = None
 
     def _make(pipeline):
         nonlocal app, client
-        _cached_settings.cache_clear()
         app = create_app(settings=test_settings)
         app.dependency_overrides[get_rag_pipeline] = lambda: pipeline
         client = TestClient(app)

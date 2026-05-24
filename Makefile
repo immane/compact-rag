@@ -54,8 +54,6 @@ ci-lint: ## Run lint exactly like GitHub Actions
 	ruff format --check src/compact_rag/
 
 ci-test: ## Run tests with coverage exactly like GitHub Actions
-	mkdir -p data
-	alembic -c alembic.ini upgrade head
 	pytest --cov=src/compact_rag --cov-report=term-missing --cov-report=xml -v
 
 ci: ci-lint ci-test ## Run local CI suite (lint + coverage tests)
