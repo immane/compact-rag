@@ -239,7 +239,7 @@ make ci-install                 # Install deps like GitHub Actions
 make ci-lint                    # ruff check + ruff format --check on src/compact_rag/
 make ci-test                    # pytest with coverage xml + term report
 make ci                         # ci-lint + ci-test
-```or
+
 make github-ci                  # GitHub all CI progress
 ```
 

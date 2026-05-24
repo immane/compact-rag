@@ -1,4 +1,4 @@
-.PHONY: help install dev-install serve admin test test-cov lint clean migrate migrate-create ci-install ci-lint ci-test ci github-ci
+.PHONY: help install dev-install serve admin test test-cov lint clean migrate migrate-create ci-install ci-lint ci-test ci github-ci github-ci-inner devcontainer-check
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -58,7 +58,30 @@ ci-test: ## Run tests with coverage exactly like GitHub Actions
 
 ci: ci-lint ci-test ## Run local CI suite (lint + coverage tests)
 
-github-ci: ci-install ci-lint ci-test ## Run full CI flow (install + lint + tests), mirrors GitHub Actions
+devcontainer-check:
+	@# Accept either a globally installed devcontainer CLI or npx (from npm)
+	@if command -v devcontainer >/dev/null 2>&1; then \
+		echo "devcontainer binary found"; \
+	elif command -v npx >/dev/null 2>&1; then \
+		echo "npx found, will use 'npx @devcontainers/cli' as fallback"; \
+	else \
+		echo "Neither 'devcontainer' nor 'npx' found in PATH."; \
+		echo "Install devcontainer CLI globally with: npm install -g @devcontainers/cli"; \
+		echo "Or install Node.js / npm so 'npx' is available."; \
+		exit 1; \
+	fi
+
+github-ci-inner: ci-install ci-lint ci-test ## Run full CI flow inside the devcontainer
+
+github-ci: devcontainer-check ## Start the devcontainer and run the full CI flow inside it
+	@if command -v devcontainer >/dev/null 2>&1; then \
+		devcontainer up --workspace-folder .; \
+		devcontainer exec --workspace-folder . make github-ci-inner; \
+	else \
+		echo "devcontainer not found in PATH, falling back to npx @devcontainers/cli"; \
+		npx @devcontainers/cli up --workspace-folder .; \
+		npx @devcontainers/cli exec --workspace-folder . make github-ci-inner; \
+	fi
 
 clean: ## Clean build artifacts
 	rm -rf build/ dist/ *.egg-info/ .pytest_cache/ htmlcov/ .coverage

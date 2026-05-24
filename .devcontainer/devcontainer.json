@@ -15,7 +15,7 @@
     "charliermarsh.ruff",
     "ms-azuretools.vscode-docker"
   ],
-  "postCreateCommand": "python -m venv .venv && . .venv/bin/activate && python -m pip install --upgrade pip && pip install -e \".[dev]\"",
+  "postCreateCommand": "python -m venv .venv --copies && . .venv/bin/activate && python -m pip install --upgrade pip && pip install -e \".[dev]\"",
   "remoteEnv": {
     "COMPACT_RAG_CONFIG": "config/default.yaml"
   },
