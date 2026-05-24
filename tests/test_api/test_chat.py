@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
 
-from compact_rag.api.deps import get_rag_pipeline
+from compact_rag.api.deps import _cached_settings, get_rag_pipeline
 from compact_rag.api.router import create_app
 from compact_rag.storage.schema import RAGCitation, RAGResponse
-from tests.conftest import _init_test_db, patch_cached_settings
 
 
 class MockPipeline:
@@ -53,9 +51,8 @@ class LegacyMockPipeline:
 
 
 @pytest.fixture
-def client(test_settings, monkeypatch):
-    patch_cached_settings(monkeypatch, test_settings)
-    asyncio.run(_init_test_db(test_settings.database.url))
+def client(test_settings):
+    _cached_settings.cache_clear()
 
     mock_pipeline = MockPipeline()
 
@@ -126,10 +123,8 @@ class TestChatCompletions:
         assert response.status_code == 422
 
 
-def test_stream_falls_back_for_legacy_pipeline_signature(test_settings, monkeypatch):
-    patch_cached_settings(monkeypatch, test_settings)
-    asyncio.run(_init_test_db(test_settings.database.url))
-
+def test_stream_falls_back_for_legacy_pipeline_signature(test_settings):
+    _cached_settings.cache_clear()
     app = create_app(settings=test_settings)
     app.dependency_overrides[get_rag_pipeline] = lambda: LegacyMockPipeline()
 
