@@ -216,6 +216,11 @@ class TestLLMClientABC:
 # ────────────────────────────────────────────────────────────────────
 
 class TestLLMFactory:
+    @pytest.fixture(autouse=True)
+    def _set_env_api_keys(self, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
+
     def test_creates_openai_client(self, openai_settings, mock_openai):
         client = LLMFactory.create(openai_settings)
         assert isinstance(client, OpenAIClient)
