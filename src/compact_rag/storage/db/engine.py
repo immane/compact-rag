@@ -8,6 +8,9 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from pathlib import Path
+import importlib
+import sys
 
 from compact_rag.config.settings import DatabaseSettings
 
@@ -29,6 +32,29 @@ def create_engine(settings: DatabaseSettings) -> AsyncEngine:
 
     if settings.url.startswith("sqlite"):
         connect_args["check_same_thread"] = False
+        # Ensure parent directory exists for SQLite paths so tests/CI
+        # can create the DB file. URL format: sqlite+aiosqlite:///absolute/path
+        try:
+            path = settings.url.split(":::", 1)[1]
+        except Exception:
+            path = None
+        if path:
+            parent = Path(path).parent
+            if not parent.exists():
+                parent.mkdir(parents=True, exist_ok=True)
+
+    # Handle MySQL driver fallbacks: prefer aiomysql if asyncmy not installed
+    if "mysql+asyncmy" in settings.url:
+        try:
+            importlib.import_module("asyncmy")
+        except Exception:
+            # asyncmy not available; try aiomysql instead
+            try:
+                importlib.import_module("aiomysql")
+                settings = DatabaseSettings(**{**settings.model_dump(), "url": settings.url.replace("mysql+asyncmy", "mysql+aiomysql")})
+            except Exception:
+                # Leave URL as-is; create_async_engine will raise if driver missing
+                pass
 
     return create_async_engine(
         settings.url,
