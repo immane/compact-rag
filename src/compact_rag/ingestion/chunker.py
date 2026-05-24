@@ -53,18 +53,24 @@ class RecursiveCharacterTextSplitter:
                 good_splits.append(s)
             else:
                 if good_splits:
-                    merged_text = _merge_splits(good_splits, _sep, self.chunk_size, self.chunk_overlap)
+                    merged_text = _merge_splits(
+                        good_splits, _sep, self.chunk_size, self.chunk_overlap
+                    )
                     chunks.extend(merged_text)
                     good_splits = []
                 if new_separators:
                     other_chunks = self._split_text(s, new_separators)
                     chunks.extend(other_chunks)
                 else:
-                    for i in range(0, len(s), max(self.chunk_size - self.chunk_overlap, 1)):
+                    for i in range(
+                        0, len(s), max(self.chunk_size - self.chunk_overlap, 1)
+                    ):
                         chunks.append(s[i : i + self.chunk_size])
 
         if good_splits:
-            merged_text = _merge_splits(good_splits, _sep, self.chunk_size, self.chunk_overlap)
+            merged_text = _merge_splits(
+                good_splits, _sep, self.chunk_size, self.chunk_overlap
+            )
             chunks.extend(merged_text)
 
         return chunks
@@ -254,22 +260,34 @@ class TableAwareChunker:
                     table_lines.append(stripped)
                 else:
                     prev_line = lines[i - 1].strip() if i > 0 else ""
-                    context_before = lines[i - 2].strip() if i > 1 and not lines[i - 2].strip().startswith("|") else prev_line
+                    context_before = (
+                        lines[i - 2].strip()
+                        if i > 1 and not lines[i - 2].strip().startswith("|")
+                        else prev_line
+                    )
 
                     if buffer:
                         non_table_before = "\n".join(buffer)
                         if non_table_before.strip():
-                            segments.append({"content": non_table_before, "is_table": False})
+                            segments.append(
+                                {"content": non_table_before, "is_table": False}
+                            )
                         buffer = []
 
                     context_parts: list[str] = []
-                    if context_before and not context_before.startswith("|") and not _TABLE_SEPARATOR_PATTERN.match(context_before):
+                    if (
+                        context_before
+                        and not context_before.startswith("|")
+                        and not _TABLE_SEPARATOR_PATTERN.match(context_before)
+                    ):
                         context_parts.append(context_before)
                     context_parts.extend(table_lines)
                     if stripped and not stripped.startswith("|"):
                         context_parts.append(stripped)
 
-                    segments.append({"content": "\n".join(context_parts), "is_table": True})
+                    segments.append(
+                        {"content": "\n".join(context_parts), "is_table": True}
+                    )
                     table_lines = []
                     in_table = False
                     if stripped:

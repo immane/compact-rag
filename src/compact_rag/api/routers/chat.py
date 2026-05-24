@@ -33,9 +33,7 @@ async def chat_completions(
     """Core Q&A endpoint — compatible with OpenAI Chat Completions API."""
     call_id = f"rag-{int(time.time() * 1000)}"
 
-    messages = [
-        {"role": m.role, "content": m.content} for m in request.messages
-    ]
+    messages = [{"role": m.role, "content": m.content} for m in request.messages]
 
     if request.stream:
         return StreamingResponse(

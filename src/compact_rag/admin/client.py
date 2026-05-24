@@ -29,7 +29,9 @@ class AdminAPIClient:
             self.session.trust_env = False
 
     def _get(self, path: str, **kwargs) -> dict:
-        r = self.session.get(f"{self.base_url}{path}", timeout=DEFAULT_REQUEST_TIMEOUT, **kwargs)
+        r = self.session.get(
+            f"{self.base_url}{path}", timeout=DEFAULT_REQUEST_TIMEOUT, **kwargs
+        )
         r.raise_for_status()
         return r.json()
 
@@ -58,7 +60,9 @@ class AdminAPIClient:
         return r.json()
 
     def _delete(self, path: str) -> dict:
-        r = self.session.delete(f"{self.base_url}{path}", timeout=DEFAULT_REQUEST_TIMEOUT)
+        r = self.session.delete(
+            f"{self.base_url}{path}", timeout=DEFAULT_REQUEST_TIMEOUT
+        )
         r.raise_for_status()
         return r.json()
 
@@ -73,23 +77,41 @@ class AdminAPIClient:
     # ── Collections ─────────────────────────────────────────
 
     def list_collections(self, page: int = 1, page_size: int = 20) -> dict:
-        return self._get("/v1/collections", params={"page": page, "page_size": page_size})
+        return self._get(
+            "/v1/collections", params={"page": page, "page_size": page_size}
+        )
 
-    def create_collection(self, name: str, description: str = "", embedding_model: str = "BAAI/bge-small-zh-v1.5", chunk_size: int = 500, chunk_overlap: int = 50) -> dict:
-        return self._post("/v1/collections", json={
-            "name": name,
-            "description": description,
-            "embedding_model": embedding_model,
-            "chunk_size": chunk_size,
-            "chunk_overlap": chunk_overlap,
-        })
+    def create_collection(
+        self,
+        name: str,
+        description: str = "",
+        embedding_model: str = "BAAI/bge-small-zh-v1.5",
+        chunk_size: int = 500,
+        chunk_overlap: int = 50,
+    ) -> dict:
+        return self._post(
+            "/v1/collections",
+            json={
+                "name": name,
+                "description": description,
+                "embedding_model": embedding_model,
+                "chunk_size": chunk_size,
+                "chunk_overlap": chunk_overlap,
+            },
+        )
 
     def delete_collection(self, name: str) -> dict:
         return self._delete(f"/v1/collections/{name}")
 
     # ── Documents ───────────────────────────────────────────
 
-    def list_documents(self, collection: str | None = None, status: str | None = None, page: int = 1, page_size: int = 20) -> dict:
+    def list_documents(
+        self,
+        collection: str | None = None,
+        status: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> dict:
         params: dict[str, str | int] = {"page": page, "page_size": page_size}
         if collection:
             params["collection"] = collection
@@ -97,7 +119,9 @@ class AdminAPIClient:
             params["status"] = status
         return self._get("/v1/documents", params=params)
 
-    def upload_document(self, file_data: bytes, filename: str, collection: str = "default") -> dict:
+    def upload_document(
+        self, file_data: bytes, filename: str, collection: str = "default"
+    ) -> dict:
         r = self.session.post(
             f"{self.base_url}/v1/documents/ingest",
             files={"file": (filename, file_data)},
@@ -115,7 +139,13 @@ class AdminAPIClient:
 
     # ── Ingestion ───────────────────────────────────────────
 
-    def list_ingestion_jobs(self, status: str | None = None, collection: str | None = None, page: int = 1, page_size: int = 20) -> dict:
+    def list_ingestion_jobs(
+        self,
+        status: str | None = None,
+        collection: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> dict:
         params: dict[str, str | int] = {"page": page, "page_size": page_size}
         if status:
             params["status"] = status
@@ -129,7 +159,9 @@ class AdminAPIClient:
     # ── Conversations ───────────────────────────────────────
 
     def list_conversations(self, page: int = 1, page_size: int = 20) -> dict:
-        return self._get("/v1/conversations", params={"page": page, "page_size": page_size})
+        return self._get(
+            "/v1/conversations", params={"page": page, "page_size": page_size}
+        )
 
     def get_conversation(self, conv_id: str) -> dict:
         return self._get(f"/v1/conversations/{conv_id}")
@@ -148,13 +180,20 @@ class AdminAPIClient:
         use_rerank: bool = True,
         use_hybrid: bool = True,
     ) -> dict:
-        return self._post("/v1/chat/completions", json={
-            "messages": messages,
-            "collection": collection,
-            "retrieval": {"top_k": top_k, "rerank": use_rerank, "hybrid_search": use_hybrid},
-            "temperature": temperature,
-            "stream": False,
-        })
+        return self._post(
+            "/v1/chat/completions",
+            json={
+                "messages": messages,
+                "collection": collection,
+                "retrieval": {
+                    "top_k": top_k,
+                    "rerank": use_rerank,
+                    "hybrid_search": use_hybrid,
+                },
+                "temperature": temperature,
+                "stream": False,
+            },
+        )
 
     def chat_stream(
         self,
@@ -168,10 +207,14 @@ class AdminAPIClient:
         """Yield content chunks from SSE streaming response."""
         with self.session.post(
             f"{self.base_url}/v1/chat/completions",
-                json={
+            json={
                 "messages": messages,
                 "collection": collection,
-                "retrieval": {"top_k": top_k, "rerank": use_rerank, "hybrid_search": use_hybrid},
+                "retrieval": {
+                    "top_k": top_k,
+                    "rerank": use_rerank,
+                    "hybrid_search": use_hybrid,
+                },
                 "temperature": temperature,
                 "stream": True,
             },
@@ -197,10 +240,13 @@ class AdminAPIClient:
         return self._get("/v1/api-keys", params={"page": page, "page_size": page_size})
 
     def create_api_key(self, name: str, permissions: list[str] | None = None) -> dict:
-        return self._post("/v1/api-keys", json={
-            "name": name,
-            "permissions": permissions or ["read"],
-        })
+        return self._post(
+            "/v1/api-keys",
+            json={
+                "name": name,
+                "permissions": permissions or ["read"],
+            },
+        )
 
     def toggle_api_key(self, key_id: str, active: bool) -> dict:
         return self._patch(f"/v1/api-keys/{key_id}", json={"is_active": active})

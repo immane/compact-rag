@@ -59,7 +59,10 @@ class EmbeddingService:
             if self._settings.use_onnx:
                 self._export_onnx(model)
             self._model = model
-            logger.info("Embedding model loaded", dimension=model.get_sentence_embedding_dimension())
+            logger.info(
+                "Embedding model loaded",
+                dimension=model.get_sentence_embedding_dimension(),
+            )
         except Exception as e:
             raise ConfigurationError(
                 f"Failed to load embedding model '{self._settings.model_name}': {e}",
@@ -71,8 +74,12 @@ class EmbeddingService:
             import torch
 
             dummy_input = {
-                "input_ids": torch.zeros((1, self._settings.max_seq_length), dtype=torch.long),
-                "attention_mask": torch.zeros((1, self._settings.max_seq_length), dtype=torch.long),
+                "input_ids": torch.zeros(
+                    (1, self._settings.max_seq_length), dtype=torch.long
+                ),
+                "attention_mask": torch.zeros(
+                    (1, self._settings.max_seq_length), dtype=torch.long
+                ),
             }
             model._first_module().eval()
             torch.onnx.export(

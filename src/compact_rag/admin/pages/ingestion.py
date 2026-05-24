@@ -13,9 +13,13 @@ def render(client: AdminAPIClient) -> None:
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        filter_status = st.selectbox("Status", ["", "running", "completed", "failed"], key="ij_status")
+        filter_status = st.selectbox(
+            "Status", ["", "running", "completed", "failed"], key="ij_status"
+        )
     with col2:
-        filter_collection = st.text_input("Collection", placeholder="Optional", key="ij_collection")
+        filter_collection = st.text_input(
+            "Collection", placeholder="Optional", key="ij_collection"
+        )
     with col3:
         page = st.number_input("Page", min_value=1, value=1, key="ij_page")
 
@@ -28,7 +32,9 @@ def render(client: AdminAPIClient) -> None:
         items = data.get("data", [])
         pagination = data.get("pagination", {})
 
-        st.caption(f"Total: {pagination.get('total', 0)} job(s) | Page {page}/{pagination.get('total_pages', 0)}")
+        st.caption(
+            f"Total: {pagination.get('total', 0)} job(s) | Page {page}/{pagination.get('total_pages', 0)}"
+        )
 
         if not items:
             st.info("No ingestion jobs found")
@@ -56,14 +62,22 @@ def render(client: AdminAPIClient) -> None:
                 with cols[0]:
                     st.markdown(f"**Job:** {job_id[:12]}...")
                     collection_id = job.get("collection_id", "")
-                    st.caption(f"Collection: {collection_id[:8]}..." if collection_id else "Collection: -")
+                    st.caption(
+                        f"Collection: {collection_id[:8]}..."
+                        if collection_id
+                        else "Collection: -"
+                    )
                 with cols[1]:
                     st.markdown(render_status_badge(status), unsafe_allow_html=True)
                 with cols[2]:
                     if total_files > 0:
                         progress = min(display_processed / total_files, 1.0)
-                        st.progress(progress, text=f"Files: {display_processed}/{total_files}")
-                    st.caption(f"Chunks: {display_chunks if display_chunks is not None else '-'}")
+                        st.progress(
+                            progress, text=f"Files: {display_processed}/{total_files}"
+                        )
+                    st.caption(
+                        f"Chunks: {display_chunks if display_chunks is not None else '-'}"
+                    )
                 with cols[3]:
                     if started or created:
                         st.caption(f"Started: {(started or created)[:19]}")

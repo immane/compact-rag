@@ -25,13 +25,13 @@ class TableExtractor:
 
     @staticmethod
     def evaluate_table_quality(markdown_table: str) -> dict:
-        lines = [line.strip() for line in markdown_table.strip().split("\n") if line.strip()]
+        lines = [
+            line.strip() for line in markdown_table.strip().split("\n") if line.strip()
+        ]
         if len(lines) < 2:
             return {"valid": False, "score": 0.0, "reason": "Too few lines"}
 
-        has_separator = any(
-            re.match(r"^\|[-| :]+\|$", line) for line in lines
-        )
+        has_separator = any(re.match(r"^\|[-| :]+\|$", line) for line in lines)
         if not has_separator:
             return {"valid": False, "score": 0.0, "reason": "No separator row"}
 
@@ -64,7 +64,9 @@ class TableExtractor:
         if camelot_tables:
             tables.extend(camelot_tables)
         else:
-            logger.info("Camelot found no tables; falling back to pdfplumber", file=file_path)
+            logger.info(
+                "Camelot found no tables; falling back to pdfplumber", file=file_path
+            )
             tables = self._extract_pdfplumber(file_path)
 
         return tables
@@ -73,7 +75,9 @@ class TableExtractor:
         try:
             import camelot
         except ImportError:
-            logger.warning("camelot-py not installed; skipping PDF table extraction via camelot")
+            logger.warning(
+                "camelot-py not installed; skipping PDF table extraction via camelot"
+            )
             return []
 
         try:
@@ -99,7 +103,10 @@ class TableExtractor:
                     markdown=md,
                     quality_score=quality["score"],
                     method=f"camelot_{t.flavor}",
-                    metadata={"accuracy": getattr(t, "accuracy", 0), "file": Path(file_path).name},
+                    metadata={
+                        "accuracy": getattr(t, "accuracy", 0),
+                        "file": Path(file_path).name,
+                    },
                 )
             )
 
@@ -156,7 +163,9 @@ class TableExtractor:
             from bs4 import BeautifulSoup
             from markdownify import markdownify
         except ImportError:
-            logger.warning("bs4/markdownify not installed; HTML table extraction unavailable")
+            logger.warning(
+                "bs4/markdownify not installed; HTML table extraction unavailable"
+            )
             return []
 
         tables: list[ExtractedTable] = []
@@ -196,7 +205,9 @@ class TableExtractor:
             from docx import Document
             from compact_rag.ingestion.loader import _docx_table_to_markdown
         except ImportError:
-            logger.warning("python-docx not installed; DOCX table extraction unavailable")
+            logger.warning(
+                "python-docx not installed; DOCX table extraction unavailable"
+            )
             return []
 
         tables: list[ExtractedTable] = []

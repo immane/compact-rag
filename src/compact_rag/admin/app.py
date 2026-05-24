@@ -30,7 +30,9 @@ if not st.session_state.authenticated:
     )
 
     with st.form("login_form"):
-        password = st.text_input("Password", type="password", placeholder="Enter admin password")
+        password = st.text_input(
+            "Password", type="password", placeholder="Enter admin password"
+        )
         submitted = st.form_submit_button("Login", use_container_width=True)
 
         if submitted:

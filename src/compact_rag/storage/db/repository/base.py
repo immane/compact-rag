@@ -76,7 +76,9 @@ class BaseRepository(Generic[TModel]):
 
         # Paginate
         offset = (page - 1) * page_size
-        stmt = stmt.order_by(self.model.created_at.desc()).offset(offset).limit(page_size)
+        stmt = (
+            stmt.order_by(self.model.created_at.desc()).offset(offset).limit(page_size)
+        )
 
         result = await session.execute(stmt)
         items = list(result.scalars().all())

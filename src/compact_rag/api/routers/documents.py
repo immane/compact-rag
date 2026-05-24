@@ -129,9 +129,7 @@ async def ingest_document_url(
 
     import tempfile
 
-    with tempfile.NamedTemporaryFile(
-        suffix=f"_{filename}", delete=False
-    ) as tmp:
+    with tempfile.NamedTemporaryFile(suffix=f"_{filename}", delete=False) as tmp:
         tmp.write(content)
         tmp_path = tmp.name
 
@@ -214,10 +212,9 @@ async def delete_document(
 ):
     """Delete a document and all its chunks (ChromaDB + SQL)."""
     from compact_rag.storage.db.repository.document import DocumentRepository
-    from compact_rag.storage.db.repository.chunk import ChunkRepository
 
     doc_repo = DocumentRepository()
-        # chunk_repo variable removed as it was unused
+    # chunk_repo variable removed as it was unused
 
     doc = await doc_repo.get_by_id(session, doc_id)
     if doc is None:

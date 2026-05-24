@@ -110,7 +110,9 @@ class AdminSettings(BaseModel):
     password: str | None = None
 
 
-_PROJECT_ROOT = Path(__file__).parent.parent.parent.parent  # src/compact_rag/config/ → project root
+_PROJECT_ROOT = Path(
+    __file__
+).parent.parent.parent.parent  # src/compact_rag/config/ → project root
 
 
 def _resolve_config(path: str) -> Path:
@@ -233,7 +235,9 @@ class Settings(BaseSettings):
         """
 
         db_url = self.database.url
-        if db_url.startswith("sqlite+aiosqlite:///") and not db_url.startswith("sqlite+aiosqlite:////"):
+        if db_url.startswith("sqlite+aiosqlite:///") and not db_url.startswith(
+            "sqlite+aiosqlite:////"
+        ):
             path = db_url.replace("sqlite+aiosqlite:///", "")
             if not os.path.isabs(path):
                 abs_path = str(_PROJECT_ROOT / path)

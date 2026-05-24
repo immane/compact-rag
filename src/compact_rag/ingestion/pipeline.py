@@ -64,7 +64,9 @@ class IngestionPipeline:
         session = self._get_session()
 
         try:
-            from compact_rag.storage.db.repository.collection import CollectionRepository
+            from compact_rag.storage.db.repository.collection import (
+                CollectionRepository,
+            )
             from compact_rag.storage.db.repository.document import DocumentRepository
 
             collection_repo = CollectionRepository()
@@ -79,9 +81,13 @@ class IngestionPipeline:
                     chunk_size=self._settings.ingestion.chunk_size,
                     chunk_overlap=self._settings.ingestion.chunk_overlap,
                 )
-                logger.info("Created collection", name=collection_name, id=collection.id)
+                logger.info(
+                    "Created collection", name=collection_name, id=collection.id
+                )
 
-            existing = await document_repo.get_by_hash(session, file_hash, collection.id)
+            existing = await document_repo.get_by_hash(
+                session, file_hash, collection.id
+            )
             if existing and not force:
                 duration_ms = (time.perf_counter() - start_time) * 1000
                 return IngestionResult(
@@ -93,7 +99,9 @@ class IngestionPipeline:
                     duration_ms=duration_ms,
                 )
 
-            from compact_rag.storage.db.repository.ingestion import IngestionJobRepository
+            from compact_rag.storage.db.repository.ingestion import (
+                IngestionJobRepository,
+            )
 
             job_repo = IngestionJobRepository()
             job = await job_repo.create_job(session, collection.id)
@@ -235,7 +243,10 @@ class IngestionPipeline:
 
             try:
                 if job_id:
-                    from compact_rag.storage.db.repository.ingestion import IngestionJobRepository
+                    from compact_rag.storage.db.repository.ingestion import (
+                        IngestionJobRepository,
+                    )
+
                     job_repo = IngestionJobRepository()
                     await job_repo.complete_job(
                         session,
@@ -270,9 +281,7 @@ class IngestionPipeline:
         for file_path in sorted(path.rglob("*")):
             if file_path.is_file() and file_path.suffix.lower() in supported:
                 try:
-                    result = await self.ingest_file(
-                        str(file_path), collection_name
-                    )
+                    result = await self.ingest_file(str(file_path), collection_name)
                     results.append(result)
                 except Exception as e:
                     results.append(

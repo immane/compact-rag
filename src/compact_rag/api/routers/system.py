@@ -29,9 +29,7 @@ async def _check_database() -> str:
         engine = create_engine(settings.database)
         async with asyncio.timeout(_HEALTH_TIMEOUT):
             async with engine.connect() as conn:
-                await conn.execute(
-                    __import__("sqlalchemy").text("SELECT 1")
-                )
+                await conn.execute(__import__("sqlalchemy").text("SELECT 1"))
         return "ok"
     except Exception as e:
         logger.warning("Database health check failed", error=str(e))
@@ -119,8 +117,7 @@ async def serve_file(
     if not ascii_filename or ascii_filename.startswith("."):
         ascii_filename = f"download{Path(filename).suffix}"
     content_disposition = (
-        f'attachment; filename="{ascii_filename}"; '
-        f"filename*=UTF-8''{quote(filename)}"
+        f"attachment; filename=\"{ascii_filename}\"; filename*=UTF-8''{quote(filename)}"
     )
     return StreamingResponse(
         iter([data]),
@@ -150,14 +147,19 @@ async def list_files(
                     path = Path(backend._resolve_path(key))
                     if path.exists():
                         file_size = path.stat().st_size
-                files.append({
-                    "storage_key": key,
-                    "filename": filename,
-                    "storage_backend": "local",
-                    "storage_type": "temp" if key.startswith("temp/") else "persistent",
-                    "content_type": mimetypes.guess_type(filename)[0] or "application/octet-stream",
-                    "file_size": file_size,
-                })
+                files.append(
+                    {
+                        "storage_key": key,
+                        "filename": filename,
+                        "storage_backend": "local",
+                        "storage_type": "temp"
+                        if key.startswith("temp/")
+                        else "persistent",
+                        "content_type": mimetypes.guess_type(filename)[0]
+                        or "application/octet-stream",
+                        "file_size": file_size,
+                    }
+                )
         except Exception:
             continue
     return {"data": files, "pagination": {"total": len(files)}}

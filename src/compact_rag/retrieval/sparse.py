@@ -51,8 +51,7 @@ class BM25Retriever:
         self.doc_ids = doc_ids
         self.metadatas = metadatas
         self._doc_lookup = {
-            doc_id: (documents[i], metadatas[i])
-            for i, doc_id in enumerate(doc_ids)
+            doc_id: (documents[i], metadatas[i]) for i, doc_id in enumerate(doc_ids)
         }
         self._is_indexed = True
         logger.info(f"BM25 index built with {len(documents)} documents")

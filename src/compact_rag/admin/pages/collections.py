@@ -13,13 +13,21 @@ def render(client: AdminAPIClient) -> None:
     with st.expander("➕ Create Collection", expanded=False):
         with st.form("create_collection_form"):
             name = st.text_input("Name", placeholder="my-collection")
-            description = st.text_area("Description", placeholder="Optional description")
-            embedding_model = st.text_input("Embedding Model", value="BAAI/bge-small-zh-v1.5")
+            description = st.text_area(
+                "Description", placeholder="Optional description"
+            )
+            embedding_model = st.text_input(
+                "Embedding Model", value="BAAI/bge-small-zh-v1.5"
+            )
             col1, col2 = st.columns(2)
             with col1:
-                chunk_size = st.number_input("Chunk Size", min_value=100, max_value=5000, value=500)
+                chunk_size = st.number_input(
+                    "Chunk Size", min_value=100, max_value=5000, value=500
+                )
             with col2:
-                chunk_overlap = st.number_input("Chunk Overlap", min_value=0, max_value=1000, value=50)
+                chunk_overlap = st.number_input(
+                    "Chunk Overlap", min_value=0, max_value=1000, value=50
+                )
             submitted = st.form_submit_button("Create", type="primary")
             if submitted and name:
                 try:
@@ -83,10 +91,14 @@ def render(client: AdminAPIClient) -> None:
                         st.rerun()
 
                     if st.session_state.get(delete_key):
-                        st.warning(f"Delete **{col_name}**? This removes all documents.")
+                        st.warning(
+                            f"Delete **{col_name}**? This removes all documents."
+                        )
                         cc1, cc2 = st.columns(2)
                         with cc1:
-                            if st.button("Confirm", key=f"confirm_{col_id}", type="primary"):
+                            if st.button(
+                                "Confirm", key=f"confirm_{col_id}", type="primary"
+                            ):
                                 try:
                                     client.delete_collection(col_name)
                                     st.success(f"Deleted '{col_name}'")
@@ -95,7 +107,9 @@ def render(client: AdminAPIClient) -> None:
                                 except Exception as e:
                                     st.error(f"Failed: {e}")
                         with cc2:
-                            if st.button("Cancel", key=f"cancel_{col_id}", type="secondary"):
+                            if st.button(
+                                "Cancel", key=f"cancel_{col_id}", type="secondary"
+                            ):
                                 st.session_state[delete_key] = False
                                 st.rerun()
                 st.divider()

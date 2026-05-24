@@ -58,9 +58,7 @@ def create_app(settings=None) -> FastAPI:
 
     # Global exception handler
     @app.exception_handler(CompactRAGException)
-    async def compact_rag_exception_handler(
-        request: Request, exc: CompactRAGException
-    ):
+    async def compact_rag_exception_handler(request: Request, exc: CompactRAGException):
         status_code = get_http_status(exc)
         logger.warning(
             f"Exception: {exc.__class__.__name__}",

@@ -18,7 +18,9 @@ def render(client: AdminAPIClient) -> None:
 
         try:
             collections_data = client.list_collections(page=1, page_size=100)
-            collection_names = [c.get("name", "") for c in collections_data.get("data", [])]
+            collection_names = [
+                c.get("name", "") for c in collections_data.get("data", [])
+            ]
             if not collection_names:
                 collection_names = ["default"]
         except Exception:
@@ -65,13 +67,13 @@ def render(client: AdminAPIClient) -> None:
                 full_content = ""
                 try:
                     for chunk in client.chat_stream(
-                            messages=api_messages,
-                            collection=collection,
-                            top_k=top_k,
-                            temperature=temperature,
-                            use_rerank=use_rerank,
-                            use_hybrid=use_hybrid,
-                        ):
+                        messages=api_messages,
+                        collection=collection,
+                        top_k=top_k,
+                        temperature=temperature,
+                        use_rerank=use_rerank,
+                        use_hybrid=use_hybrid,
+                    ):
                         full_content += chunk
                         placeholder.markdown(full_content + "▌")
                     placeholder.markdown(full_content)
@@ -92,9 +94,17 @@ def render(client: AdminAPIClient) -> None:
                             use_rerank=use_rerank,
                             use_hybrid=use_hybrid,
                         )
-                        content = response.get("choices", [{}])[0].get("message", {}).get("content", "")
+                        content = (
+                            response.get("choices", [{}])[0]
+                            .get("message", {})
+                            .get("content", "")
+                        )
                         st.markdown(content)
-                        citations = response.get("choices", [{}])[0].get("message", {}).get("citations", [])
+                        citations = (
+                            response.get("choices", [{}])[0]
+                            .get("message", {})
+                            .get("citations", [])
+                        )
                     except Exception as e:
                         content = f"Error: {e}"
                         st.error(content)
@@ -110,8 +120,10 @@ def render(client: AdminAPIClient) -> None:
                         )
                         st.caption(f"_{snippet[:200]}_")
 
-        st.session_state.chat_messages.append({
-            "role": "assistant",
-            "content": content,
-            "citations": citations,
-        })
+        st.session_state.chat_messages.append(
+            {
+                "role": "assistant",
+                "content": content,
+                "citations": citations,
+            }
+        )

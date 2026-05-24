@@ -36,9 +36,7 @@ class RerankerService:
         pairs = [(query, c.content) for c in candidates]
         scores = await asyncio.to_thread(self._model.predict, pairs)
 
-        scored = sorted(
-            zip(candidates, scores), key=lambda x: x[1], reverse=True
-        )
+        scored = sorted(zip(candidates, scores), key=lambda x: x[1], reverse=True)
         reranked = []
         for result, score in scored:
             reranked.append(

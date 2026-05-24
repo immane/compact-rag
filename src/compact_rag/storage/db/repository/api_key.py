@@ -14,9 +14,7 @@ class ApiKeyRepository(BaseRepository[ApiKey]):
 
     async def get_by_hash(self, session: AsyncSession, key_hash: str) -> ApiKey | None:
         """Find an API key by its SHA256 hash."""
-        stmt = select(ApiKey).where(
-            ApiKey.key_hash == key_hash, ApiKey.is_active
-        )
+        stmt = select(ApiKey).where(ApiKey.key_hash == key_hash, ApiKey.is_active)
         result = await session.execute(stmt)
         return result.scalar_one_or_none()
 

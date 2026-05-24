@@ -12,8 +12,12 @@ def render(client: AdminAPIClient) -> None:
     st.title("📄 Documents")
 
     with st.expander("📤 Upload Document", expanded=False):
-        uploaded_file = st.file_uploader("Choose a file", type=["pdf", "docx", "txt", "md", "html"])
-        collection = st.text_input("Target Collection", value="default", key="upload_collection")
+        uploaded_file = st.file_uploader(
+            "Choose a file", type=["pdf", "docx", "txt", "md", "html"]
+        )
+        collection = st.text_input(
+            "Target Collection", value="default", key="upload_collection"
+        )
         if uploaded_file and st.button("Upload & Ingest", type="primary"):
             try:
                 result = client.upload_document(
@@ -21,7 +25,9 @@ def render(client: AdminAPIClient) -> None:
                     filename=uploaded_file.name,
                     collection=collection,
                 )
-                st.success(f"Ingested: {result.get('filename', '')} — {result.get('status', '')}")
+                st.success(
+                    f"Ingested: {result.get('filename', '')} — {result.get('status', '')}"
+                )
                 st.rerun()
             except Exception as e:
                 st.error(f"Upload failed: {e}")
@@ -30,9 +36,18 @@ def render(client: AdminAPIClient) -> None:
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        filter_collection = st.text_input("Collection", value="", placeholder="Filter by collection", key="doc_filter_col")
+        filter_collection = st.text_input(
+            "Collection",
+            value="",
+            placeholder="Filter by collection",
+            key="doc_filter_col",
+        )
     with col2:
-        filter_status = st.selectbox("Status", ["", "pending", "completed", "failed", "skipped"], key="doc_filter_status")
+        filter_status = st.selectbox(
+            "Status",
+            ["", "pending", "completed", "failed", "skipped"],
+            key="doc_filter_status",
+        )
     with col3:
         page = st.number_input("Page", min_value=1, value=1, key="doc_page")
 
@@ -46,7 +61,9 @@ def render(client: AdminAPIClient) -> None:
         items = data.get("data", [])
         pagination = data.get("pagination", {})
 
-        st.caption(f"Total: {pagination.get('total', 0)} document(s) | Page {page}/{pagination.get('total_pages', 0)}")
+        st.caption(
+            f"Total: {pagination.get('total', 0)} document(s) | Page {page}/{pagination.get('total_pages', 0)}"
+        )
 
         if not items:
             st.info("No documents found")
@@ -66,7 +83,9 @@ def render(client: AdminAPIClient) -> None:
                 cols = st.columns([3, 1, 1, 1, 1])
                 with cols[0]:
                     st.markdown(f"**{filename}**")
-                    st.caption(f"ID: {doc_id[:8]}... | Type: {file_type} | Pages: {page_count}")
+                    st.caption(
+                        f"ID: {doc_id[:8]}... | Type: {file_type} | Pages: {page_count}"
+                    )
                     if error_msg:
                         st.caption(f"Error: {error_msg}")
                 with cols[1]:
@@ -78,7 +97,9 @@ def render(client: AdminAPIClient) -> None:
                 with cols[4]:
                     detail_key = f"detail_{doc_id}"
                     if st.button("🔍 Detail", key=f"detail_btn_{doc_id}"):
-                        st.session_state[detail_key] = not st.session_state.get(detail_key, False)
+                        st.session_state[detail_key] = not st.session_state.get(
+                            detail_key, False
+                        )
                         st.rerun()
 
                     delete_key = f"delete_doc_{doc_id}"
@@ -101,7 +122,9 @@ def render(client: AdminAPIClient) -> None:
                     st.warning(f"Delete **{filename}**?")
                     cc1, cc2 = st.columns(2)
                     with cc1:
-                        if st.button("Confirm", key=f"confirm_del_{doc_id}", type="primary"):
+                        if st.button(
+                            "Confirm", key=f"confirm_del_{doc_id}", type="primary"
+                        ):
                             try:
                                 client.delete_document(doc_id)
                                 st.success(f"Deleted '{filename}'")
@@ -110,7 +133,9 @@ def render(client: AdminAPIClient) -> None:
                             except Exception as e:
                                 st.error(f"Failed: {e}")
                     with cc2:
-                        if st.button("Cancel", key=f"cancel_del_{doc_id}", type="secondary"):
+                        if st.button(
+                            "Cancel", key=f"cancel_del_{doc_id}", type="secondary"
+                        ):
                             st.session_state[delete_key] = False
                             st.rerun()
                 st.divider()

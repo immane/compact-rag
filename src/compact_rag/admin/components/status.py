@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 
-
 _STATUS_COLORS: dict[str, str] = {
     "ok": "#28a745",
     "active": "#28a745",
@@ -27,5 +26,5 @@ def render_status_badge(status: str) -> str:
     return (
         f'<span style="display:inline-block;padding:2px 8px;border-radius:10px;'
         f'background-color:{color};color:white;font-size:12px;font-weight:600;">'
-        f'{status.upper()}</span>'
+        f"{status.upper()}</span>"
     )

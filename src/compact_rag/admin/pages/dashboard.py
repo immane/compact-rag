@@ -14,12 +14,23 @@ def render(client: AdminAPIClient) -> None:
     try:
         health_data = client.health()
     except Exception:
-        health_data = {"api": "unknown", "database": "unknown", "chromadb": "unknown", "storage": "unknown"}
+        health_data = {
+            "api": "unknown",
+            "database": "unknown",
+            "chromadb": "unknown",
+            "storage": "unknown",
+        }
 
     try:
         info_data = client.info()
     except Exception:
-        info_data = {"version": "?", "llm_provider": "?", "llm_model": "?", "storage_backend": "?", "embedding_model": "?"}
+        info_data = {
+            "version": "?",
+            "llm_provider": "?",
+            "llm_model": "?",
+            "storage_backend": "?",
+            "embedding_model": "?",
+        }
 
     try:
         collections_data = client.list_collections(page=1, page_size=1)
@@ -79,21 +90,28 @@ def render(client: AdminAPIClient) -> None:
         st.subheader("⚡ Recent Ingestion Jobs")
         if recent_jobs:
             import pandas as pd
+
             rows = []
             for j in recent_jobs[:5]:
                 total_files = j.get("total_files", 0)
                 processed_files = j.get("processed_files", 0)
                 total_chunks = j.get("total_chunks", 0)
-                if j.get("status") == "completed" and total_files > 0 and processed_files == 0:
+                if (
+                    j.get("status") == "completed"
+                    and total_files > 0
+                    and processed_files == 0
+                ):
                     processed_files = total_files
                 if j.get("status") == "completed" and total_chunks == 0:
                     total_chunks = "-"
-                rows.append({
-                    "ID": j.get("id", "")[:8],
-                    "Status": j.get("status", "pending"),
-                    "Progress": f"{processed_files}/{total_files}",
-                    "Chunks": total_chunks,
-                })
+                rows.append(
+                    {
+                        "ID": j.get("id", "")[:8],
+                        "Status": j.get("status", "pending"),
+                        "Progress": f"{processed_files}/{total_files}",
+                        "Chunks": total_chunks,
+                    }
+                )
             df = pd.DataFrame(rows)
             st.dataframe(df, use_container_width=True, hide_index=True)
         else:

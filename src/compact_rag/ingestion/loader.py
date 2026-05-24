@@ -104,7 +104,9 @@ class PDFLoader(BaseLoader):
         try:
             from pypdf import PdfReader
         except ImportError:
-            raise DocumentLoadError("pypdf not installed. Install with: pip install pypdf")
+            raise DocumentLoadError(
+                "pypdf not installed. Install with: pip install pypdf"
+            )
 
         reader = PdfReader(file_path)
         return [(page.extract_text() or "") for page in reader.pages]
@@ -222,13 +224,13 @@ class TextLoader(BaseLoader):
             content = Path(file_path).read_text(encoding="latin-1")
         except Exception as e:
             raise DocumentLoadError(
-                f"Failed to load text file '{os.path.basename(file_path)}': {e}", cause=e
+                f"Failed to load text file '{os.path.basename(file_path)}': {e}",
+                cause=e,
             )
 
         page_size = 3000
         page_parts = [
-            content[i : i + page_size]
-            for i in range(0, len(content), page_size)
+            content[i : i + page_size] for i in range(0, len(content), page_size)
         ]
 
         pages: list[LoadedPage] = []
@@ -261,13 +263,13 @@ class MarkdownLoader(BaseLoader):
             content = Path(file_path).read_text(encoding="utf-8")
         except Exception as e:
             raise DocumentLoadError(
-                f"Failed to load markdown file '{os.path.basename(file_path)}': {e}", cause=e
+                f"Failed to load markdown file '{os.path.basename(file_path)}': {e}",
+                cause=e,
             )
 
         page_size = 3000
         page_parts = [
-            content[i : i + page_size]
-            for i in range(0, len(content), page_size)
+            content[i : i + page_size] for i in range(0, len(content), page_size)
         ]
 
         pages: list[LoadedPage] = []
@@ -308,7 +310,8 @@ class HTMLLoader(BaseLoader):
             html_content = Path(file_path).read_text(encoding="utf-8")
         except Exception as e:
             raise DocumentLoadError(
-                f"Failed to load HTML file '{os.path.basename(file_path)}': {e}", cause=e
+                f"Failed to load HTML file '{os.path.basename(file_path)}': {e}",
+                cause=e,
             )
 
         try:

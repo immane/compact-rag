@@ -36,7 +36,9 @@ class StorageFileRepository(BaseRepository[StorageFile]):
             session, page=page, page_size=page_size, storage_type=storage_type
         )
 
-    async def get_by_key(self, session: AsyncSession, storage_key: str) -> StorageFile | None:
+    async def get_by_key(
+        self, session: AsyncSession, storage_key: str
+    ) -> StorageFile | None:
         """Find a storage file by its storage key."""
         stmt = select(StorageFile).where(StorageFile.storage_key == storage_key)
         result = await session.execute(stmt)

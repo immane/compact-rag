@@ -24,9 +24,13 @@ def render(client: AdminAPIClient) -> None:
                 try:
                     result = client.create_api_key(name=name, permissions=perms)
                     raw_key = result.get("key", "")
-                    st.success("API key created! Copy the key below — it won't be shown again.")
+                    st.success(
+                        "API key created! Copy the key below — it won't be shown again."
+                    )
                     st.code(raw_key, language="text")
-                    st.caption("Save this key now. After you navigate away or refresh, it cannot be retrieved.")
+                    st.caption(
+                        "Save this key now. After you navigate away or refresh, it cannot be retrieved."
+                    )
                 except Exception as e:
                     st.error(f"Failed: {e}")
 
@@ -39,7 +43,9 @@ def render(client: AdminAPIClient) -> None:
         items = data.get("data", [])
         pagination = data.get("pagination", {})
 
-        st.caption(f"Total: {pagination.get('total', 0)} key(s) | Page {page}/{pagination.get('total_pages', 0)}")
+        st.caption(
+            f"Total: {pagination.get('total', 0)} key(s) | Page {page}/{pagination.get('total_pages', 0)}"
+        )
 
         if not items:
             st.info("No API keys found")
@@ -86,7 +92,9 @@ def render(client: AdminAPIClient) -> None:
                         st.warning(f"Delete **{key_name}**?")
                         cc1, cc2 = st.columns(2)
                         with cc1:
-                            if st.button("Confirm", key=f"key_confirm_{key_id}", type="primary"):
+                            if st.button(
+                                "Confirm", key=f"key_confirm_{key_id}", type="primary"
+                            ):
                                 try:
                                     client.delete_api_key(key_id)
                                     st.success(f"Deleted '{key_name}'")
@@ -95,7 +103,9 @@ def render(client: AdminAPIClient) -> None:
                                 except Exception as e:
                                     st.error(f"Failed: {e}")
                         with cc2:
-                            if st.button("Cancel", key=f"key_cancel_{key_id}", type="secondary"):
+                            if st.button(
+                                "Cancel", key=f"key_cancel_{key_id}", type="secondary"
+                            ):
                                 st.session_state[delete_key] = False
                                 st.rerun()
                 st.divider()

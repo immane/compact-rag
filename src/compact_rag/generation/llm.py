@@ -36,8 +36,7 @@ class LLMClient(ABC):
         tools: list[dict] | None = None,
         temperature: float = 0.1,
         max_tokens: int = 2048,
-    ) -> ChatResponse:
-        ...
+    ) -> ChatResponse: ...
 
     @abstractmethod
     async def chat_stream(
@@ -45,8 +44,7 @@ class LLMClient(ABC):
         messages: list[dict],
         tools: list[dict] | None = None,
         temperature: float = 0.1,
-    ) -> AsyncGenerator[str, None]:
-        ...
+    ) -> AsyncGenerator[str, None]: ...
 
     def supports_tool_calling(self) -> bool:
         return False
@@ -107,16 +105,26 @@ class OpenAIClient(LLMClient):
                 content=choice.message.content or "",
                 tool_calls=tool_calls,
                 token_usage={
-                    "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
-                    "completion_tokens": response.usage.completion_tokens if response.usage else 0,
-                    "total_tokens": response.usage.total_tokens if response.usage else 0,
+                    "prompt_tokens": response.usage.prompt_tokens
+                    if response.usage
+                    else 0,
+                    "completion_tokens": response.usage.completion_tokens
+                    if response.usage
+                    else 0,
+                    "total_tokens": response.usage.total_tokens
+                    if response.usage
+                    else 0,
                 },
                 model=response.model,
                 finish_reason=choice.finish_reason or "stop",
             )
         except Exception as e:
             error_msg = str(e).lower()
-            if "401" in error_msg or "unauthorized" in error_msg or "invalid_api_key" in error_msg:
+            if (
+                "401" in error_msg
+                or "unauthorized" in error_msg
+                or "invalid_api_key" in error_msg
+            ):
                 raise LLMAuthError(str(e), cause=e)
             if "429" in error_msg or "rate" in error_msg:
                 raise LLMRateLimitError(str(e), cause=e)
@@ -209,21 +217,27 @@ class AnthropicClient(LLMClient):
                 elif block.type == "tool_use":
                     if tool_calls is None:
                         tool_calls = []
-                    tool_calls.append({
-                        "id": block.id,
-                        "type": "function",
-                        "function": {
-                            "name": block.name,
-                            "arguments": block.input,
-                        },
-                    })
+                    tool_calls.append(
+                        {
+                            "id": block.id,
+                            "type": "function",
+                            "function": {
+                                "name": block.name,
+                                "arguments": block.input,
+                            },
+                        }
+                    )
 
             return ChatResponse(
                 content=content,
                 tool_calls=tool_calls,
                 token_usage={
-                    "prompt_tokens": response.usage.input_tokens if response.usage else 0,
-                    "completion_tokens": response.usage.output_tokens if response.usage else 0,
+                    "prompt_tokens": response.usage.input_tokens
+                    if response.usage
+                    else 0,
+                    "completion_tokens": response.usage.output_tokens
+                    if response.usage
+                    else 0,
                     "total_tokens": (
                         response.usage.input_tokens + response.usage.output_tokens
                         if response.usage
@@ -271,7 +285,10 @@ class AnthropicClient(LLMClient):
 
             async with self._client.messages.stream(**kwargs) as stream:
                 async for event in stream:
-                    if event.type == "content_block_delta" and event.delta.type == "text_delta":
+                    if (
+                        event.type == "content_block_delta"
+                        and event.delta.type == "text_delta"
+                    ):
                         yield event.delta.text
         except Exception as e:
             error_msg = str(e).lower()
@@ -350,7 +367,9 @@ class OllamaClient(LLMClient):
                             text = str(e)
                         import re
 
-                        m = re.search(r"status\s*code[:=]?\s*([0-9]{3})", text, re.IGNORECASE)
+                        m = re.search(
+                            r"status\s*code[:=]?\s*([0-9]{3})", text, re.IGNORECASE
+                        )
                         if m:
                             try:
                                 status_code = int(m.group(1))
@@ -358,8 +377,12 @@ class OllamaClient(LLMClient):
                                 status_code = None
 
                     # If transient server error, wait and retry once
-                    if status_code is not None and 500 <= int(status_code) < 600 and attempt + 1 < sdk_attempts:
-                        backoff = 0.5 * (2 ** attempt)
+                    if (
+                        status_code is not None
+                        and 500 <= int(status_code) < 600
+                        and attempt + 1 < sdk_attempts
+                    ):
+                        backoff = 0.5 * (2**attempt)
                         logger.warning(
                             "Ollama SDK attempt %s failed with status %s, retrying after %.1fs",
                             attempt + 1,
@@ -383,7 +406,9 @@ class OllamaClient(LLMClient):
                             timeout=self._timeout,
                             trust_env=False,
                         ) as client:
-                            resp = await client.post(f"{self._host}/api/chat", json=kwargs)
+                            resp = await client.post(
+                                f"{self._host}/api/chat", json=kwargs
+                            )
                             try:
                                 resp.raise_for_status()
                             except httpx.HTTPStatusError as he:
@@ -398,11 +423,13 @@ class OllamaClient(LLMClient):
                                 )
                                 last_http_exc = he
                                 if 500 <= status < 600 and attempt + 1 < http_attempts:
-                                    await asyncio.sleep(0.5 * (2 ** attempt))
+                                    await asyncio.sleep(0.5 * (2**attempt))
                                     continue
                                 # Non-retryable HTTP error
                                 raise LLMServiceError(
-                                    f"Ollama HTTP API error {status}", details={"body": body}, cause=he
+                                    f"Ollama HTTP API error {status}",
+                                    details={"body": body},
+                                    cause=he,
                                 )
                             # Success
                             response = resp.json()
@@ -416,15 +443,20 @@ class OllamaClient(LLMClient):
                             str(rexc),
                         )
                         if attempt + 1 < http_attempts:
-                            await asyncio.sleep(0.5 * (2 ** attempt))
+                            await asyncio.sleep(0.5 * (2**attempt))
                             continue
                         raise LLMServiceError("Ollama HTTP request failed", cause=rexc)
 
                 # If both SDK and HTTP failed, raise a GenerationError so API maps to appropriate HTTP status
-                if (self._sdk_client is not None and sdk_exception is not None) and last_http_exc is not None:
+                if (
+                    self._sdk_client is not None and sdk_exception is not None
+                ) and last_http_exc is not None:
                     raise LLMServiceError(
                         "Ollama SDK and HTTP fallback both failed",
-                        details={"sdk_error": str(sdk_exception), "http_error": str(last_http_exc)},
+                        details={
+                            "sdk_error": str(sdk_exception),
+                            "http_error": str(last_http_exc),
+                        },
                         cause=sdk_exception,
                     )
             # If SDK succeeded, `response` is already set from the SDK call above.
@@ -439,13 +471,16 @@ class OllamaClient(LLMClient):
                 token_usage={
                     "prompt_tokens": response.get("prompt_eval_count", 0),
                     "completion_tokens": response.get("eval_count", 0),
-                    "total_tokens": response.get("prompt_eval_count", 0) + response.get("eval_count", 0),
+                    "total_tokens": response.get("prompt_eval_count", 0)
+                    + response.get("eval_count", 0),
                 },
                 model=response.get("model", self._model),
                 finish_reason=response.get("done_reason", "stop"),
             )
         except asyncio.TimeoutError as e:
-            raise LLMTimeoutError(f"Ollama request timed out after {self._timeout}s", cause=e)
+            raise LLMTimeoutError(
+                f"Ollama request timed out after {self._timeout}s", cause=e
+            )
         except GenerationError:
             # propagate GenerationError up so API layer can convert to HTTP status
             raise
@@ -493,7 +528,9 @@ class OllamaClient(LLMClient):
                             text = str(e)
                         import re
 
-                        m = re.search(r"status\s*code[:=]?\s*([0-9]{3})", text, re.IGNORECASE)
+                        m = re.search(
+                            r"status\s*code[:=]?\s*([0-9]{3})", text, re.IGNORECASE
+                        )
                         if m:
                             try:
                                 status_code = int(m.group(1))
@@ -512,14 +549,20 @@ class OllamaClient(LLMClient):
                                 timeout=self._timeout,
                                 trust_env=False,
                             ) as client:
-                                async with client.stream("POST", f"{self._host}/api/chat", json=kwargs) as resp:
+                                async with client.stream(
+                                    "POST", f"{self._host}/api/chat", json=kwargs
+                                ) as resp:
                                     try:
                                         resp.raise_for_status()
                                     except httpx.HTTPStatusError as he:
                                         body = await resp.aread()
                                         raise LLMServiceError(
                                             f"Ollama HTTP stream error {resp.status_code}",
-                                            details={"body": body.decode("utf-8", errors="replace")},
+                                            details={
+                                                "body": body.decode(
+                                                    "utf-8", errors="replace"
+                                                )
+                                            },
                                             cause=he,
                                         )
                                     async for line in resp.aiter_lines():
@@ -529,11 +572,15 @@ class OllamaClient(LLMClient):
                                             chunk = json.loads(line)
                                         except json.JSONDecodeError:
                                             continue
-                                        content = chunk.get("message", {}).get("content")
+                                        content = chunk.get("message", {}).get(
+                                            "content"
+                                        )
                                         if content:
                                             yield content
                         except httpx.RequestError as rexc:
-                            raise LLMServiceError("Ollama HTTP stream request failed", cause=rexc)
+                            raise LLMServiceError(
+                                "Ollama HTTP stream request failed", cause=rexc
+                            )
                         return
                     raise
 
@@ -543,7 +590,9 @@ class OllamaClient(LLMClient):
                 timeout=self._timeout,
                 trust_env=False,
             ) as client:
-                async with client.stream("POST", f"{self._host}/api/chat", json=kwargs) as resp:
+                async with client.stream(
+                    "POST", f"{self._host}/api/chat", json=kwargs
+                ) as resp:
                     resp.raise_for_status()
                     async for line in resp.aiter_lines():
                         if not line:
@@ -571,7 +620,9 @@ class LLMFactory:
         if provider == LLMProvider.OPENAI:
             api_key = os.getenv("OPENAI_API_KEY")
             if not api_key:
-                raise ConfigurationError("OPENAI_API_KEY must be set in the environment")
+                raise ConfigurationError(
+                    "OPENAI_API_KEY must be set in the environment"
+                )
             return OpenAIClient(
                 model=settings.model,
                 api_key=api_key,
@@ -581,7 +632,9 @@ class LLMFactory:
         elif provider == LLMProvider.ANTHROPIC:
             api_key = os.getenv("ANTHROPIC_API_KEY")
             if not api_key:
-                raise ConfigurationError("ANTHROPIC_API_KEY must be set in the environment")
+                raise ConfigurationError(
+                    "ANTHROPIC_API_KEY must be set in the environment"
+                )
             return AnthropicClient(
                 model=settings.model,
                 api_key=api_key,

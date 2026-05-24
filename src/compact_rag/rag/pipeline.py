@@ -94,8 +94,12 @@ class RAGPipeline:
         if self.conversation_repo is not None and conversation_id:
             try:
                 await self._save_conversation(
-                    conversation_id, question, answer, citations, token_usage,
-                    retrieval_latency + generation_latency
+                    conversation_id,
+                    question,
+                    answer,
+                    citations,
+                    token_usage,
+                    retrieval_latency + generation_latency,
                 )
             except Exception as e:
                 logger.warning("Failed to save conversation", error=str(e))
@@ -155,20 +159,23 @@ class RAGPipeline:
         if self.conversation_repo is not None and conversation_id:
             try:
                 await self._save_conversation(
-                    conversation_id, question, full_answer, citations,
+                    conversation_id,
+                    question,
+                    full_answer,
+                    citations,
                     {"completion_tokens": len(full_answer.split())},
-                    retrieval_latency + generation_latency
+                    retrieval_latency + generation_latency,
                 )
             except Exception as e:
                 logger.warning("Failed to save conversation", error=str(e))
 
-    def _build_messages(
-        self, question: str, history: list[dict]
-    ) -> list[dict]:
+    def _build_messages(self, question: str, history: list[dict]) -> list[dict]:
         system_prompt = self.prompt_manager.render_system_prompt()
         messages = [{"role": "system", "content": system_prompt}]
         for msg in history[-20:]:
-            messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
+            messages.append(
+                {"role": msg.get("role", "user"), "content": msg.get("content", "")}
+            )
         messages.append({"role": "user", "content": question})
         return messages
 
@@ -179,14 +186,10 @@ class RAGPipeline:
         for i, r in enumerate(results):
             content = getattr(r, "content", str(r))
             filename = getattr(r, "metadata", {}).get("filename", "unknown")
-            chunks.append(
-                f"[Document {i + 1}] (Source: {filename})\n{content}"
-            )
+            chunks.append(f"[Document {i + 1}] (Source: {filename})\n{content}")
         return "\n\n---\n\n".join(chunks)
 
-    def _augment_messages(
-        self, messages: list[dict], context: str
-    ) -> list[dict]:
+    def _augment_messages(self, messages: list[dict], context: str) -> list[dict]:
         augmented = list(messages)
         rag_instruction = (
             "Use the following retrieved context to answer the user's question. "

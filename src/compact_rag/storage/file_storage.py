@@ -232,7 +232,9 @@ class MinIOBackend(StorageBackend):
 
     async def list(self, prefix: str = "") -> list[str]:
         try:
-            objects = self.client.list_objects(self.bucket, prefix=prefix, recursive=True)
+            objects = self.client.list_objects(
+                self.bucket, prefix=prefix, recursive=True
+            )
             return [obj.object_name for obj in objects]
         except Exception as e:
             raise StorageBackendError(f"MinIO list failed: {e}") from e
@@ -289,11 +291,17 @@ def get_storage_backend(settings: StorageSettings | None = None) -> StorageBacke
             secure=settings.minio.secure,
         )
     elif backend_type == "oss":
-        raise StorageBackendError("OSS backend requires oss2 package. Install with: pip install oss2")
+        raise StorageBackendError(
+            "OSS backend requires oss2 package. Install with: pip install oss2"
+        )
     elif backend_type == "kodo":
-        raise StorageBackendError("Kodo backend requires qiniu package. Install with: pip install qiniu")
+        raise StorageBackendError(
+            "Kodo backend requires qiniu package. Install with: pip install qiniu"
+        )
     elif backend_type == "s3":
-        raise StorageBackendError("S3 backend requires boto3 package. Install with: pip install boto3")
+        raise StorageBackendError(
+            "S3 backend requires boto3 package. Install with: pip install boto3"
+        )
     else:
         raise StorageBackendError(f"Unknown storage backend: {backend_type}")
 

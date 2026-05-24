@@ -18,21 +18,16 @@ class ToolEngine:
         return [t.to_openai_tool() for t in self._tool_map.values()]
 
     async def execute_tool_call(self, tool_call: dict) -> dict:
-        name = (
-            tool_call.get("function", {})
-            .get("name", "")
-            or tool_call.get("name", "")
+        name = tool_call.get("function", {}).get("name", "") or tool_call.get(
+            "name", ""
         )
-        tool_call_id = (
-            tool_call.get("id", "")
-            or tool_call.get("function", {}).get("id", name)
+        tool_call_id = tool_call.get("id", "") or tool_call.get("function", {}).get(
+            "id", name
         )
 
-        arguments_str = (
-            tool_call.get("function", {})
-            .get("arguments", "{}")
-            or tool_call.get("arguments", "{}")
-        )
+        arguments_str = tool_call.get("function", {}).get(
+            "arguments", "{}"
+        ) or tool_call.get("arguments", "{}")
 
         if isinstance(arguments_str, dict):
             kwargs = arguments_str

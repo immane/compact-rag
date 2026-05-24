@@ -55,7 +55,9 @@ class VectorStore:
         try:
             import chromadb
         except ImportError:
-            raise VectorStoreError("chromadb not installed. Install with: pip install chromadb")
+            raise VectorStoreError(
+                "chromadb not installed. Install with: pip install chromadb"
+            )
         persist_dir = Path(self._settings.persist_directory)
         persist_dir.mkdir(parents=True, exist_ok=True)
         return chromadb.PersistentClient(path=str(persist_dir))
@@ -94,7 +96,9 @@ class VectorStore:
                 "chunk_index": chunk.chunk_index,
                 "page_number": chunk.page_number or 0,
                 "filename": chunk.metadata.get("filename", ""),
-                "collection_name": chunk.metadata.get("collection_name", self._settings.collection_name),
+                "collection_name": chunk.metadata.get(
+                    "collection_name", self._settings.collection_name
+                ),
                 "is_table": chunk.is_table,
                 "token_count": chunk.token_count,
             }
@@ -113,7 +117,9 @@ class VectorStore:
                 metadatas=metadatas,
             )
         except Exception as e:
-            raise VectorStoreError(f"Failed to add documents to vector store: {e}", cause=e)
+            raise VectorStoreError(
+                f"Failed to add documents to vector store: {e}", cause=e
+            )
 
         logger.info("Documents added to vector store", count=len(ids))
         return ids
@@ -236,12 +242,12 @@ class VectorStore:
             if not results["ids"]:
                 return 0
             self.collection.delete(ids=results["ids"])
-            logger.info("Deleted chunks for document", doc_id=doc_id, count=len(results["ids"]))
+            logger.info(
+                "Deleted chunks for document", doc_id=doc_id, count=len(results["ids"])
+            )
             return len(results["ids"])
         except Exception as e:
-            raise VectorStoreError(
-                f"Failed to delete document {doc_id}: {e}", cause=e
-            )
+            raise VectorStoreError(f"Failed to delete document {doc_id}: {e}", cause=e)
 
     def delete_by_ids(self, chroma_ids: list[str]) -> int:
         if not chroma_ids:

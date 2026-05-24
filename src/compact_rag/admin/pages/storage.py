@@ -39,7 +39,9 @@ def render(client: AdminAPIClient) -> None:
 
     st.markdown("---")
 
-    type_filter = st.selectbox("Type", ["all", "persistent", "temp"], key="storage_type_filter")
+    type_filter = st.selectbox(
+        "Type", ["all", "persistent", "temp"], key="storage_type_filter"
+    )
 
     filtered = items
     if type_filter != "all":
@@ -60,7 +62,9 @@ def render(client: AdminAPIClient) -> None:
                 with cols[0]:
                     st.markdown(f"**{filename}**")
                     st.caption(f"Key: {storage_key}")
-                    st.caption(f"Type: {content_type or 'unknown'} | Size: {file_size / 1024:.1f} KB")
+                    st.caption(
+                        f"Type: {content_type or 'unknown'} | Size: {file_size / 1024:.1f} KB"
+                    )
                 with cols[1]:
                     st.caption(storage_type)
                 with cols[2]:

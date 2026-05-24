@@ -21,7 +21,9 @@ def render(client: AdminAPIClient) -> None:
         items = data.get("data", [])
         pagination = data.get("pagination", {})
 
-        st.caption(f"Total: {pagination.get('total', 0)} conversation(s) | Page {page}/{pagination.get('total_pages', 0)}")
+        st.caption(
+            f"Total: {pagination.get('total', 0)} conversation(s) | Page {page}/{pagination.get('total_pages', 0)}"
+        )
 
         if not items:
             st.info("No conversations yet")
@@ -44,7 +46,9 @@ def render(client: AdminAPIClient) -> None:
                 with cols[2]:
                     detail_key = f"conv_detail_{conv_id}"
                     if st.button("🔍 View", key=f"conv_view_{conv_id}"):
-                        st.session_state[detail_key] = not st.session_state.get(detail_key, False)
+                        st.session_state[detail_key] = not st.session_state.get(
+                            detail_key, False
+                        )
                         if st.session_state[detail_key]:
                             st.session_state["conv_detail_data"] = None
                         st.rerun()
@@ -64,7 +68,9 @@ def render(client: AdminAPIClient) -> None:
                             export_col1, export_col2, export_col3 = st.columns(3)
                             with export_col1:
                                 if st.button("📥 JSON", key=f"json_{conv_id}"):
-                                    json_str = json.dumps(messages, indent=2, default=str)
+                                    json_str = json.dumps(
+                                        messages, indent=2, default=str
+                                    )
                                     st.download_button(
                                         "Download JSON",
                                         json_str,
@@ -73,37 +79,61 @@ def render(client: AdminAPIClient) -> None:
                             with export_col2:
                                 if st.button("📊 CSV", key=f"csv_{conv_id}"):
                                     buf = io.StringIO()
-                                    writer = csv.DictWriter(buf, fieldnames=["role", "content", "sources", "token_count"])
+                                    writer = csv.DictWriter(
+                                        buf,
+                                        fieldnames=[
+                                            "role",
+                                            "content",
+                                            "sources",
+                                            "token_count",
+                                        ],
+                                    )
                                     writer.writeheader()
                                     for m in messages:
-                                        writer.writerow({
-                                            "role": m.get("role", ""),
-                                            "content": m.get("content", ""),
-                                            "sources": json.dumps(m.get("sources", [])),
-                                            "token_count": m.get("token_count", 0),
-                                        })
+                                        writer.writerow(
+                                            {
+                                                "role": m.get("role", ""),
+                                                "content": m.get("content", ""),
+                                                "sources": json.dumps(
+                                                    m.get("sources", [])
+                                                ),
+                                                "token_count": m.get("token_count", 0),
+                                            }
+                                        )
                                     st.download_button(
                                         "Download CSV",
                                         buf.getvalue(),
                                         file_name=f"conversation_{conv_id[:8]}.csv",
                                     )
                             with export_col3:
-                                if st.button("❌ Close", key=f"conv_close_{conv_id}", type="secondary"):
+                                if st.button(
+                                    "❌ Close",
+                                    key=f"conv_close_{conv_id}",
+                                    type="secondary",
+                                ):
                                     st.session_state[detail_key] = False
                                     st.session_state["conv_detail_data"] = None
                                     st.rerun()
 
                             for msg in messages:
                                 role_icon = "🧑" if msg.get("role") == "user" else "🤖"
-                                st.markdown(f"{role_icon} **{msg.get('role', '').upper()}** — {msg.get('created_at', '')[:19]}")
+                                st.markdown(
+                                    f"{role_icon} **{msg.get('role', '').upper()}** — {msg.get('created_at', '')[:19]}"
+                                )
                                 st.markdown(msg.get("content", ""))
                                 sources = msg.get("sources")
                                 if sources:
                                     with st.expander("📎 Sources"):
-                                        src_data = json.loads(sources) if isinstance(sources, str) else sources
+                                        src_data = (
+                                            json.loads(sources)
+                                            if isinstance(sources, str)
+                                            else sources
+                                        )
                                         if isinstance(src_data, list):
                                             for src in src_data:
-                                                st.caption(f"- {src.get('filename', '?')} (score: {src.get('score', 0):.3f})")
+                                                st.caption(
+                                                    f"- {src.get('filename', '?')} (score: {src.get('score', 0):.3f})"
+                                                )
                                         else:
                                             st.json(src_data)
                                 st.divider()
@@ -120,7 +150,9 @@ def render(client: AdminAPIClient) -> None:
                         st.warning(f"Delete **{title}**?")
                         cc1, cc2 = st.columns(2)
                         with cc1:
-                            if st.button("Confirm", key=f"conv_confirm_{conv_id}", type="primary"):
+                            if st.button(
+                                "Confirm", key=f"conv_confirm_{conv_id}", type="primary"
+                            ):
                                 try:
                                     client.delete_conversation(conv_id)
                                     st.success(f"Deleted '{title}'")
@@ -129,7 +161,9 @@ def render(client: AdminAPIClient) -> None:
                                 except Exception as e:
                                     st.error(f"Failed: {e}")
                         with cc2:
-                            if st.button("Cancel", key=f"conv_cancel_{conv_id}", type="secondary"):
+                            if st.button(
+                                "Cancel", key=f"conv_cancel_{conv_id}", type="secondary"
+                            ):
                                 st.session_state[delete_key] = False
                                 st.rerun()
                 st.divider()

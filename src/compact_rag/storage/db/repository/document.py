@@ -35,7 +35,11 @@ class DocumentRepository(BaseRepository[Document]):
         )
 
     async def update_status(
-        self, session: AsyncSession, doc_id: str, status: str, error_message: str | None = None
+        self,
+        session: AsyncSession,
+        doc_id: str,
+        status: str,
+        error_message: str | None = None,
     ) -> Document | None:
         """Update document processing status."""
         kwargs = {"status": status}
