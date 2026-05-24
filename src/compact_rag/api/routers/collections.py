@@ -29,7 +29,16 @@ async def list_collections(
     from compact_rag.storage.db.repository.collection import CollectionRepository
 
     repo = CollectionRepository()
-    results, total = await repo.list(session, page=page, page_size=page_size)
+    if hasattr(repo, "list_with_realtime_document_count"):
+        results_with_count, total = await repo.list_with_realtime_document_count(
+            session,
+            page=page,
+            page_size=page_size,
+        )
+    else:
+        # Backward-compatible fallback for tests/mocks that only implement list().
+        collections, total = await repo.list(session, page=page, page_size=page_size)
+        results_with_count = [(c, c.document_count or 0) for c in collections]
     total_pages = max(1, (total + page_size - 1) // page_size) if total > 0 else 0
 
     return PaginatedResponse(
@@ -41,11 +50,11 @@ async def list_collections(
                 embedding_model=c.embedding_model or "",
                 chunk_size=c.chunk_size or 500,
                 chunk_overlap=c.chunk_overlap or 50,
-                document_count=c.document_count or 0,
+                document_count=doc_count,
                 created_at=str(c.created_at) if c.created_at else None,
                 updated_at=str(c.updated_at) if c.updated_at else None,
             )
-            for c in results
+            for c, doc_count in results_with_count
         ],
         pagination=PaginationMeta(
             page=page, page_size=page_size, total=total, total_pages=total_pages
