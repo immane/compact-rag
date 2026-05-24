@@ -92,7 +92,11 @@ class RAGPipeline:
         else:
             token_usage = {}
 
-        if self.conversation_repo is not None and db_session is not None and conversation_id:
+        if (
+            self.conversation_repo is not None
+            and db_session is not None
+            and conversation_id
+        ):
             try:
                 await self._save_conversation(
                     db_session,
@@ -159,7 +163,11 @@ class RAGPipeline:
 
         citations = self._build_citations(retrieved)
 
-        if self.conversation_repo is not None and db_session is not None and conversation_id:
+        if (
+            self.conversation_repo is not None
+            and db_session is not None
+            and conversation_id
+        ):
             try:
                 await self._save_conversation(
                     db_session,

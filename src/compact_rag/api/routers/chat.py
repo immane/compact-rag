@@ -69,7 +69,9 @@ async def chat_completions(
 
     if request.stream:
         return StreamingResponse(
-            _stream_response(call_id, request, pipeline, messages, session, conversation_id),
+            _stream_response(
+                call_id, request, pipeline, messages, session, conversation_id
+            ),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
@@ -78,7 +80,9 @@ async def chat_completions(
             },
         )
 
-    response = await _query_with_compat(pipeline, request, messages, session, conversation_id)
+    response = await _query_with_compat(
+        pipeline, request, messages, session, conversation_id
+    )
     await session.commit()
 
     return ChatCompletionResponse(
@@ -124,7 +128,9 @@ async def _stream_response(
         # Send initial chunk
         yield f"data: {json.dumps({'id': call_id, 'object': 'chat.completion.chunk', 'created': int(time.time()), 'model': request.model, 'choices': [{'index': 0, 'delta': {'role': 'assistant'}, 'finish_reason': None}]})}\n\n"
 
-        async for chunk in _query_stream_with_compat(pipeline, request, messages, session, conversation_id):
+        async for chunk in _query_stream_with_compat(
+            pipeline, request, messages, session, conversation_id
+        ):
             yield f"data: {json.dumps({'id': call_id, 'object': 'chat.completion.chunk', 'created': int(time.time()), 'model': request.model, 'choices': [{'index': 0, 'delta': {'content': chunk}, 'finish_reason': None}]})}\n\n"
 
         # Send finish
