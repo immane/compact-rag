@@ -1,0 +1,24 @@
+{
+  "name": "compact-rag Dev Container",
+  "image": "mcr.microsoft.com/devcontainers/python:0-3.12",
+  "remoteUser": "vscode",
+  "workspaceFolder": "/workspace/compact-rag",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace/compact-rag,type=bind,consistency=cached",
+  "forwardPorts": [8000, 8501],
+  "settings": {
+    "python.defaultInterpreterPath": "/workspace/compact-rag/.venv/bin/python",
+    "editor.formatOnSave": true
+  },
+  "extensions": [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "charliermarsh.ruff",
+    "ms-azuretools.vscode-docker"
+  ],
+  "postCreateCommand": "python -m venv .venv && . .venv/bin/activate && python -m pip install --upgrade pip && pip install -e \".[dev]\"",
+  "remoteEnv": {
+    "COMPACT_RAG_CONFIG": "config/default.yaml"
+  },
+  "features": {},
+  "overrideCommand": false
+}
