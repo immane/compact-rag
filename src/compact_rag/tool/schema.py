@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 import json
-from typing import Callable, get_type_hints
+from typing import Callable, get_type_hints, get_origin, get_args
 
 from compact_rag.common.logger import get_logger
 
@@ -14,6 +14,15 @@ _TYPE_MAP = {
     float: "number",
     bool: "boolean",
 }
+
+
+def _resolve_type(param_type):
+    origin = get_origin(param_type)
+    if origin is not None:
+        args = [a for a in get_args(param_type) if a is not type(None)]
+        if len(args) == 1:
+            return args[0]
+    return param_type
 
 
 class Tool:
@@ -34,7 +43,8 @@ class Tool:
                 continue
 
             param_type = hints.get(param_name, str)
-            json_type = _TYPE_MAP.get(param_type, "string")
+            resolved = _resolve_type(param_type)
+            json_type = _TYPE_MAP.get(resolved, "string")
 
             prop: dict = {"type": json_type}
             if param.default is not inspect.Parameter.empty:

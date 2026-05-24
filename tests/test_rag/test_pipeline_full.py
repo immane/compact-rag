@@ -154,7 +154,8 @@ class TestRAGPipelineQuery:
 
     async def test_query_with_tool_engine_calls_execute(self):
         tool_engine = MagicMock()
-        tool_engine.execute = AsyncMock(return_value=([], {"tool": "result"}))
+        tool_engine.get_openai_tools = MagicMock(return_value=[{"type": "function", "function": {"name": "test"}}])
+        tool_engine.run_loop = AsyncMock(return_value="tool result")
 
         pipeline = RAGPipeline(
             retriever=FakeRetriever(),
@@ -164,12 +165,13 @@ class TestRAGPipelineQuery:
         )
         result = await pipeline.query(question="use tool")
 
-        tool_engine.execute.assert_awaited_once()
+        tool_engine.run_loop.assert_awaited_once()
         assert result.answer == "default answer"
 
     async def test_query_tool_engine_error_is_handled(self):
         tool_engine = MagicMock()
-        tool_engine.execute = AsyncMock(side_effect=RuntimeError("tool boom"))
+        tool_engine.get_openai_tools = MagicMock(return_value=[{"type": "function", "function": {"name": "test"}}])
+        tool_engine.run_loop = AsyncMock(side_effect=RuntimeError("tool boom"))
 
         pipeline = RAGPipeline(
             retriever=FakeRetriever(),
@@ -312,9 +314,9 @@ class TestBuildContext:
             _fake_search_result("d2", "content two", filename="b.pdf"),
         ]
         ctx = pipeline._build_context(results)
-        assert "[Document 1] (Source: a.pdf)" in ctx
+        assert "[来源 1] 文件: a.pdf" in ctx
         assert "content one" in ctx
-        assert "[Document 2] (Source: b.pdf)" in ctx
+        assert "[来源 2] 文件: b.pdf" in ctx
         assert "content two" in ctx
         assert "---" in ctx
 
@@ -325,7 +327,7 @@ class TestBuildContext:
         results = [_fake_search_result("d1", "hello")]
         results[0].metadata = {}
         ctx = pipeline._build_context(results)
-        assert "[Document 1] (Source: unknown)" in ctx
+        assert "[来源 1] 文件: unknown" in ctx
         assert "hello" in ctx
 
 
@@ -534,7 +536,8 @@ class TestQueryStream:
 
     async def test_stream_with_tool_engine(self):
         tool_engine = MagicMock()
-        tool_engine.execute = AsyncMock(return_value=([{"role": "tool", "content": "t"}], {}))
+        tool_engine.get_openai_tools = MagicMock(return_value=[{"type": "function", "function": {"name": "test"}}])
+        tool_engine.run_loop = AsyncMock(return_value="tool result")
 
         pipeline = RAGPipeline(
             retriever=FakeRetriever(),
@@ -547,11 +550,12 @@ class TestQueryStream:
             collected.append(chunk)
 
         assert collected == ["one"]
-        tool_engine.execute.assert_awaited_once()
+        tool_engine.run_loop.assert_awaited_once()
 
     async def test_stream_tool_engine_error_handled(self):
         tool_engine = MagicMock()
-        tool_engine.execute = AsyncMock(side_effect=RuntimeError("tool fail"))
+        tool_engine.get_openai_tools = MagicMock(return_value=[{"type": "function", "function": {"name": "test"}}])
+        tool_engine.run_loop = AsyncMock(side_effect=RuntimeError("tool fail"))
 
         pipeline = RAGPipeline(
             retriever=FakeRetriever(),

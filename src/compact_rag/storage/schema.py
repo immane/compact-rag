@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -31,7 +33,7 @@ class IngestionResult(BaseModel):
 
     doc_id: str
     filename: str
-    status: str  # completed | skipped | failed
+    status: Literal["completed", "skipped", "failed"]
     chunk_count: int = 0
     table_count: int = 0
     error_message: str | None = None

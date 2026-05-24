@@ -13,6 +13,7 @@ from compact_rag.api.deps import (
     get_db_session,
     get_settings,
     get_storage_backend,
+    verify_api_key,
 )
 from compact_rag.api.schemas import (
     DocumentIngestResponse,
@@ -38,6 +39,7 @@ async def ingest_document(
     session: AsyncSession = Depends(get_db_session),
     settings: Settings = Depends(get_settings),
     storage: StorageBackend = Depends(get_storage_backend),
+    _api_key: str | None = Depends(verify_api_key),
 ):
     """Upload and ingest a document file."""
     if not file.filename:
@@ -116,6 +118,7 @@ async def ingest_document_url(
     request: IngestUrlRequest,
     session: AsyncSession = Depends(get_db_session),
     settings: Settings = Depends(get_settings),
+    _api_key: str | None = Depends(verify_api_key),
 ):
     """Ingest a document from a URL."""
     import httpx
@@ -209,6 +212,7 @@ async def get_document(
 async def delete_document(
     doc_id: str,
     session: AsyncSession = Depends(get_db_session),
+    _api_key: str | None = Depends(verify_api_key),
 ):
     """Delete a document and all its chunks (ChromaDB + SQL)."""
     from compact_rag.storage.db.repository.document import DocumentRepository

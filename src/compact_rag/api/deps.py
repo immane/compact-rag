@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
 from functools import lru_cache
 from typing import AsyncGenerator
 
+from fastapi import Header, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from compact_rag.config.settings import Settings, get_settings
@@ -106,3 +108,28 @@ def get_rag_pipeline():
         conversation_repo=ConversationRepository(),
         message_repo=MessageRepository(),
     )
+
+
+async def verify_api_key(
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
+) -> str | None:
+    """Verify API key from X-API-Key header.
+
+    Returns the api key id if valid, None if no key provided (optional auth).
+    Raises HTTPException 401 if key is invalid or expired.
+    """
+    if not x_api_key:
+        return None
+    key_hash = hashlib.sha256(x_api_key.encode()).hexdigest()
+    from compact_rag.storage.db.repository.api_key import ApiKeyRepository
+    from compact_rag.storage.db.engine import create_engine, create_session_factory
+
+    settings = _cached_settings()
+    engine = create_engine(settings.database)
+    session_factory = create_session_factory(engine)
+    async with session_factory() as session:
+        repo = ApiKeyRepository()
+        api_key = await repo.get_by_hash(session, key_hash)
+        if api_key is None:
+            raise HTTPException(status_code=401, detail="Invalid or inactive API key")
+        return api_key.id

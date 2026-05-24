@@ -45,15 +45,20 @@ class RAGPipeline:
     ) -> Any:
         t_start = time.perf_counter()
 
-        messages = self._build_messages(question, conversation_history or [])
-        tool_results = None
+        messages = self._build_messages(
+            question, conversation_history or [], collection
+        )
 
         if self.tool_engine:
             try:
-                tool_messages, tool_results = await self.tool_engine.execute(
-                    messages, self.llm_client
+                tools = self.tool_engine.get_openai_tools()
+                result = await self.tool_engine.run_loop(
+                    llm_client=self.llm_client,
+                    messages=messages,
+                    tools=tools,
                 )
-                messages.extend(tool_messages)
+                if result:
+                    messages.append({"role": "assistant", "content": result})
             except Exception as e:
                 logger.warning("Tool execution failed", error=str(e))
 
@@ -130,14 +135,20 @@ class RAGPipeline:
         conversation_id: str | None = None,
         db_session=None,
     ) -> AsyncGenerator[str, None]:
-        messages = self._build_messages(question, conversation_history or [])
+        messages = self._build_messages(
+            question, conversation_history or [], collection
+        )
 
         if self.tool_engine:
             try:
-                tool_messages, _ = await self.tool_engine.execute(
-                    messages, self.llm_client
+                tools = self.tool_engine.get_openai_tools()
+                result = await self.tool_engine.run_loop(
+                    llm_client=self.llm_client,
+                    messages=messages,
+                    tools=tools,
                 )
-                messages.extend(tool_messages)
+                if result:
+                    messages.append({"role": "assistant", "content": result})
             except Exception as e:
                 logger.warning("Tool execution failed", error=str(e))
 
@@ -162,6 +173,7 @@ class RAGPipeline:
         generation_latency = (time.perf_counter() - t_gen_start) * 1000
 
         citations = self._build_citations(retrieved)
+        self._last_stream_citations = citations
 
         if (
             self.conversation_repo is not None
@@ -181,8 +193,12 @@ class RAGPipeline:
             except Exception as e:
                 logger.warning("Failed to save conversation", error=str(e))
 
-    def _build_messages(self, question: str, history: list[dict]) -> list[dict]:
-        system_prompt = self.prompt_manager.render_system_prompt()
+    def _build_messages(
+        self, question: str, history: list[dict], collection: str = "default"
+    ) -> list[dict]:
+        system_prompt = self.prompt_manager.render_system_prompt(
+            collections=[collection]
+        )
         messages = [{"role": "system", "content": system_prompt}]
         for msg in history[-20:]:
             messages.append(
@@ -194,12 +210,18 @@ class RAGPipeline:
     def _build_context(self, results: list) -> str:
         if not results:
             return "No relevant documents found."
-        chunks = []
+        documents = []
         for i, r in enumerate(results):
             content = getattr(r, "content", str(r))
-            filename = getattr(r, "metadata", {}).get("filename", "unknown")
-            chunks.append(f"[Document {i + 1}] (Source: {filename})\n{content}")
-        return "\n\n---\n\n".join(chunks)
+            metadata = getattr(r, "metadata", {})
+            documents.append(
+                {
+                    "filename": metadata.get("filename", "unknown"),
+                    "page_number": metadata.get("page_number", "N/A"),
+                    "content": content,
+                }
+            )
+        return self.prompt_manager.render_rag_context(documents)
 
     def _augment_messages(self, messages: list[dict], context: str) -> list[dict]:
         augmented = list(messages)
@@ -236,8 +258,8 @@ class RAGPipeline:
     def _build_citations(self, results: list) -> list[RAGCitation]:
         citations: list[RAGCitation] = []
         for r in results:
-            doc_id = getattr(r, "id", "unknown")
             metadata = getattr(r, "metadata", {})
+            doc_id = metadata.get("doc_id", getattr(r, "id", "unknown"))
             citations.append(
                 RAGCitation(
                     doc_id=doc_id,

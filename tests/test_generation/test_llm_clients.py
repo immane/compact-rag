@@ -783,7 +783,10 @@ class TestAnthropicClient:
 
         call_kwargs = mock_create.call_args[1]
         assert "tools" in call_kwargs
-        assert call_kwargs["tools"] == tools
+        expected_anthropic_tools = [
+            {"name": "get_weather", "description": "", "input_schema": {}}
+        ]
+        assert call_kwargs["tools"] == expected_anthropic_tools
 
     # ── Error classification ──────────────────────────────────────
 

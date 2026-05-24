@@ -230,9 +230,9 @@ class ApiKeyUpdateRequest(BaseModel):
 
 class HealthResponse(BaseModel):
     api: str = "ok"  # ok | degraded | error | disabled
-    database: str = "degraded"
-    chromadb: str = "degraded"
-    storage: str = "degraded"
+    database: str = "ok"
+    chromadb: str = "ok"
+    storage: str = "ok"
 
 
 class InfoResponse(BaseModel):

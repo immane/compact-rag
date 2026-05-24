@@ -181,6 +181,24 @@ class AnthropicClient(LLMClient):
     def supports_tool_calling(self) -> bool:
         return True
 
+    @staticmethod
+    def _convert_tools_to_anthropic(
+        openai_tools: list[dict] | None,
+    ) -> list[dict] | None:
+        if not openai_tools:
+            return None
+        result = []
+        for t in openai_tools:
+            func = t.get("function", {})
+            result.append(
+                {
+                    "name": func.get("name", ""),
+                    "description": func.get("description", ""),
+                    "input_schema": func.get("parameters", {}),
+                }
+            )
+        return result
+
     async def chat(
         self,
         messages: list[dict],
@@ -206,7 +224,7 @@ class AnthropicClient(LLMClient):
             if system_msg.strip():
                 kwargs["system"] = system_msg.strip()
             if tools:
-                kwargs["tools"] = tools
+                kwargs["tools"] = self._convert_tools_to_anthropic(tools)
 
             response = await self._client.messages.create(**kwargs)
             content = ""
@@ -281,7 +299,7 @@ class AnthropicClient(LLMClient):
             if system_msg.strip():
                 kwargs["system"] = system_msg.strip()
             if tools:
-                kwargs["tools"] = tools
+                kwargs["tools"] = self._convert_tools_to_anthropic(tools)
 
             async with self._client.messages.stream(**kwargs) as stream:
                 async for event in stream:
@@ -618,7 +636,7 @@ class LLMFactory:
     def create(settings: LLMSettings) -> LLMClient:
         provider = settings.provider
         if provider == LLMProvider.OPENAI:
-            api_key = os.getenv("OPENAI_API_KEY")
+            api_key = settings.api_key or os.getenv("OPENAI_API_KEY")
             if not api_key:
                 raise ConfigurationError(
                     "OPENAI_API_KEY must be set in the environment"
@@ -630,7 +648,7 @@ class LLMFactory:
                 timeout=settings.timeout,
             )
         elif provider == LLMProvider.ANTHROPIC:
-            api_key = os.getenv("ANTHROPIC_API_KEY")
+            api_key = settings.api_key or os.getenv("ANTHROPIC_API_KEY")
             if not api_key:
                 raise ConfigurationError(
                     "ANTHROPIC_API_KEY must be set in the environment"

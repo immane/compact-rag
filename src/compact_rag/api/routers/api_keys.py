@@ -8,7 +8,7 @@ import secrets
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from compact_rag.api.deps import get_db_session
+from compact_rag.api.deps import get_db_session, verify_api_key
 from compact_rag.api.schemas import (
     ApiKeyCreateRequest,
     ApiKeyCreateResponse,
@@ -21,7 +21,10 @@ from compact_rag.common.exceptions import ConfigurationError, FileNotFoundError
 from compact_rag.common.logger import get_logger
 
 logger = get_logger(__name__)
-router = APIRouter(tags=["API Keys"])
+router = APIRouter(
+    tags=["API Keys"],
+    dependencies=[Depends(verify_api_key)],
+)
 
 
 def _generate_api_key() -> tuple[str, str]:

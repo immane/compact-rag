@@ -2,13 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import re
-from typing import TYPE_CHECKING
+
+import numpy as np
 
 from compact_rag.common.logger import get_logger
 from compact_rag.storage.schema import DocumentChunk
-
-if TYPE_CHECKING:
-    import numpy as np
 
 logger = get_logger(__name__)
 
@@ -171,15 +169,33 @@ class SemanticChunker:
         if len(sentences) <= 1:
             return [text] if text else []
 
+        if (
+            embeddings is None
+            or len(embeddings) == 0
+            or len(embeddings) != len(sentences)
+        ):
+            return self.split_text(text)
+
         chunks: list[str] = []
         current: list[str] = [sentences[0]]
         current_len = len(sentences[0])
 
         for i in range(1, len(sentences)):
+            prev_emb = embeddings[i - 1]
+            curr_emb = embeddings[i]
+            norm_product = np.linalg.norm(prev_emb) * np.linalg.norm(curr_emb)
+            if norm_product > 0:
+                similarity = float(np.dot(prev_emb, curr_emb) / norm_product)
+            else:
+                similarity = 0.0
+
             sentence = sentences[i]
             s_len = len(sentence)
 
-            if current_len + s_len > self.chunk_size:
+            if (
+                similarity < self.similarity_threshold
+                or current_len + s_len > self.chunk_size
+            ):
                 chunks.append(" ".join(current))
                 current = []
                 current_len = 0

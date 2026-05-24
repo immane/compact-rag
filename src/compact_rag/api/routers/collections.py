@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from compact_rag.api.deps import get_db_session
+from compact_rag.api.deps import get_db_session, verify_api_key
 from compact_rag.api.schemas import (
     CollectionCreateRequest,
     CollectionResponse,
@@ -66,6 +66,7 @@ async def list_collections(
 async def create_collection(
     request: CollectionCreateRequest,
     session: AsyncSession = Depends(get_db_session),
+    _api_key: str | None = Depends(verify_api_key),
 ):
     """Create a new document collection."""
     from compact_rag.storage.db.repository.collection import CollectionRepository
@@ -103,6 +104,7 @@ async def create_collection(
 async def delete_collection(
     name: str,
     session: AsyncSession = Depends(get_db_session),
+    _api_key: str | None = Depends(verify_api_key),
 ):
     """Delete a collection by name."""
     from compact_rag.storage.db.repository.collection import CollectionRepository

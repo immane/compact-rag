@@ -62,6 +62,7 @@ class HybridRetriever:
             fused = rrf_fusion(
                 dense_results,
                 sparse_results,
+                k=self._settings.fusion_k,
                 top_k=self._settings.fusion_top_k,
             )
 

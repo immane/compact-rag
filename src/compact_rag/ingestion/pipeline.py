@@ -38,6 +38,8 @@ class IngestionPipeline:
             settings = get_settings()
         self._settings = settings
         self._session = session
+        self._engine = None
+        self._session_factory = None
 
     async def ingest_file(
         self,
@@ -270,6 +272,7 @@ class IngestionPipeline:
         self,
         dir_path: str,
         collection_name: str = "default",
+        force: bool = False,
     ) -> list[IngestionResult]:
         path = Path(dir_path)
         if not path.is_dir():
@@ -281,7 +284,9 @@ class IngestionPipeline:
         for file_path in sorted(path.rglob("*")):
             if file_path.is_file() and file_path.suffix.lower() in supported:
                 try:
-                    result = await self.ingest_file(str(file_path), collection_name)
+                    result = await self.ingest_file(
+                        str(file_path), collection_name, force=force
+                    )
                     results.append(result)
                 except Exception as e:
                     results.append(
@@ -376,9 +381,11 @@ class IngestionPipeline:
             return self._session
         from compact_rag.storage.db.engine import create_engine, create_session_factory
 
-        engine = create_engine(self._settings.database)
-        factory = create_session_factory(engine)
-        return factory()
+        if self._engine is None:
+            self._engine = create_engine(self._settings.database)
+        if self._session_factory is None:
+            self._session_factory = create_session_factory(self._engine)
+        return self._session_factory()
 
     def _get_storage_backend(self):
         from compact_rag.storage.file_storage import get_storage_backend

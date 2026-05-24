@@ -133,8 +133,20 @@ async def _stream_response(
         ):
             yield f"data: {json.dumps({'id': call_id, 'object': 'chat.completion.chunk', 'created': int(time.time()), 'model': request.model, 'choices': [{'index': 0, 'delta': {'content': chunk}, 'finish_reason': None}]})}\n\n"
 
-        # Send finish
-        yield f"data: {json.dumps({'id': call_id, 'object': 'chat.completion.chunk', 'created': int(time.time()), 'model': request.model, 'choices': [{'index': 0, 'delta': {}, 'finish_reason': 'stop'}]})}\n\n"
+        # Send finish with citations
+        citations = getattr(pipeline, "_last_stream_citations", [])
+        citation_dicts = [
+            {
+                "doc_id": c.doc_id,
+                "filename": c.filename,
+                "page_number": c.page_number,
+                "chunk_index": c.chunk_index,
+                "score": c.score,
+                "content_snippet": c.content_snippet,
+            }
+            for c in citations
+        ]
+        yield f"data: {json.dumps({'id': call_id, 'object': 'chat.completion.chunk', 'created': int(time.time()), 'model': request.model, 'choices': [{'index': 0, 'delta': {'citations': citation_dicts}, 'finish_reason': 'stop'}]})}\n\n"
         yield "data: [DONE]\n\n"
 
         await session.commit()

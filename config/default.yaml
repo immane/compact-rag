@@ -27,13 +27,10 @@ retrieval:
   fusion_alpha: 0.5
 
 llm:
-  #provider: "ollama"
-  #model: "deepseek-r1:7b"
   provider: "openai"
-  model: "deepseek-v4-flash"
-  api_base: "https://api.deepseek.com"
+  model: "gpt-4o-mini"
   temperature: 0.1
-  max_tokens: 20480
+  max_tokens: 2048
   timeout: 60
 
 ingestion:

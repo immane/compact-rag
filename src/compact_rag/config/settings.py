@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -40,6 +40,7 @@ class RetrievalSettings(BaseModel):
     rerank_top_k: int = 10
     fusion_method: Literal["rrf", "rsf"] = "rrf"
     fusion_alpha: float = 0.5
+    fusion_k: int = 60
 
 
 class LLMSettings(BaseModel):
@@ -59,6 +60,14 @@ class IngestionSettings(BaseModel):
     supported_extensions: list[str] = Field(
         default_factory=lambda: [".pdf", ".docx", ".txt", ".md", ".html"]
     )
+
+    @model_validator(mode="after")
+    def _validate_chunk_constraints(self) -> IngestionSettings:
+        if self.chunk_size < self.chunk_overlap:
+            raise ValueError(
+                f"chunk_size ({self.chunk_size}) must be >= chunk_overlap ({self.chunk_overlap})"
+            )
+        return self
 
 
 class LocalStorageSettings(BaseModel):
@@ -185,6 +194,7 @@ class Settings(BaseSettings):
             pass
 
         # Determine config file path
+        explicitly_specified = config_path is not None
         if config_path is None:
             config_path = os.environ.get("COMPACT_RAG_CONFIG", "config/default.yaml")
 
@@ -195,7 +205,15 @@ class Settings(BaseSettings):
             with open(default_path) as f:
                 merged = yaml.safe_load(f) or {}
 
-        # Load specified config (overrides defaults)
+        # Auto-load production.yaml overlay only when no explicit config was given
+        if not explicitly_specified:
+            prod_path = _resolve_config("config/production.yaml")
+            if prod_path.exists() and prod_path != default_path:
+                with open(prod_path) as f:
+                    prod_overlay = yaml.safe_load(f) or {}
+                _deep_merge(merged, prod_overlay)
+
+        # Load specified config (overrides defaults + production)
         specified_path = _resolve_config(config_path)
         if specified_path.exists():
             with open(specified_path) as f:

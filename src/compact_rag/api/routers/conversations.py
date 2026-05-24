@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from compact_rag.api.deps import get_db_session
+from compact_rag.api.deps import get_db_session, verify_api_key
 from compact_rag.api.schemas import (
     ConversationDetailResponse,
     ConversationResponse,
@@ -95,6 +95,7 @@ async def get_conversation(
 async def delete_conversation(
     conv_id: str,
     session: AsyncSession = Depends(get_db_session),
+    _api_key: str | None = Depends(verify_api_key),
 ):
     """Delete a conversation and its messages."""
     from compact_rag.storage.db.repository.conversation import ConversationRepository

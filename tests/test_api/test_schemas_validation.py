@@ -273,9 +273,9 @@ class TestHealthResponse:
     def test_defaults(self):
         h = HealthResponse()
         assert h.api == "ok"
-        assert h.database == "degraded"
-        assert h.chromadb == "degraded"
-        assert h.storage == "degraded"
+        assert h.database == "ok"
+        assert h.chromadb == "ok"
+        assert h.storage == "ok"
 
     def test_custom_statuses(self):
         h = HealthResponse(api="ok", database="ok", chromadb="ok", storage="ok")
@@ -293,9 +293,9 @@ class TestHealthResponse:
 
     def test_missing_fields_use_defaults(self):
         h = HealthResponse(api="ok")
-        assert h.database == "degraded"
-        assert h.chromadb == "degraded"
-        assert h.storage == "degraded"
+        assert h.database == "ok"
+        assert h.chromadb == "ok"
+        assert h.storage == "ok"
 
 
 # ── InfoResponse ────────────────────────────────────────────────

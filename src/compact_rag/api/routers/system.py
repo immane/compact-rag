@@ -80,11 +80,18 @@ async def health() -> HealthResponse:
 @router.get("/info", response_model=InfoResponse)
 async def info(settings=Depends(get_settings)) -> InfoResponse:
     """Get system information."""
+    from compact_rag.api.deps import get_embedding_service
+
+    try:
+        embedding_service = get_embedding_service()
+        embedding_dim = embedding_service.dimension
+    except Exception:
+        embedding_dim = 384
     return InfoResponse(
         version=__version__,
         database_url=_mask_url(settings.database.url),
         embedding_model=settings.embedding.model_name,
-        embedding_dimension=384,
+        embedding_dimension=embedding_dim,
         llm_provider=settings.llm.provider,
         llm_model=settings.llm.model,
         storage_backend=settings.storage.backend,

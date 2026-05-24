@@ -7,6 +7,13 @@ import streamlit as st
 from compact_rag.admin.client import AdminAPIClient
 from compact_rag.admin.config import get_api_base_url, is_auth_required, verify_password
 
+
+def get_version() -> str:
+    from compact_rag import __version__
+
+    return __version__
+
+
 st.set_page_config(
     page_title="Compact-RAG Admin",
     page_icon="🔍",
@@ -105,6 +112,9 @@ PAGES = {
 
 page_choice = st.sidebar.radio("Navigation", list(PAGES.keys()), key="nav")
 page_module = PAGES[page_choice]
+
+st.sidebar.divider()
+st.sidebar.caption(f"Version: {get_version()}")
 
 client = st.session_state.client
 

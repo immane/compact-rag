@@ -77,6 +77,28 @@ def create_app(settings=None) -> FastAPI:
             },
         )
 
+    @app.exception_handler(Exception)
+    async def generic_exception_handler(request: Request, exc: Exception):
+        import uuid
+
+        request_id = str(uuid.uuid4())
+        logger.error(
+            "Unhandled exception",
+            request_id=request_id,
+            exc_info=True,
+        )
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Internal server error",
+                    "details": {},
+                    "request_id": request_id,
+                }
+            },
+        )
+
     # Register routers
     from compact_rag.api.routers.system import router as system_router
     from compact_rag.api.routers.collections import router as collections_router

@@ -36,6 +36,7 @@ jobs:
 
       - name: Run migrations
         run: |
+          mkdir -p data
           alembic -c alembic.ini upgrade head
 
       - name: Test with coverage

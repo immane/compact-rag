@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from compact_rag.api.deps import get_db_session
+from compact_rag.api.deps import get_db_session, verify_api_key
 from compact_rag.api.schemas import (
     IngestionJobResponse,
     PaginatedResponse,
@@ -25,6 +25,7 @@ async def list_ingestion_jobs(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_db_session),
+    _api_key: str | None = Depends(verify_api_key),
 ):
     """List ingestion jobs."""
     from compact_rag.storage.db.repository.ingestion import IngestionJobRepository
@@ -65,6 +66,7 @@ async def list_ingestion_jobs(
 async def get_ingestion_job(
     job_id: str,
     session: AsyncSession = Depends(get_db_session),
+    _api_key: str | None = Depends(verify_api_key),
 ):
     """Get ingestion job details."""
     from compact_rag.storage.db.repository.ingestion import IngestionJobRepository
