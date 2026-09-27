@@ -112,19 +112,25 @@ def get_rag_pipeline():
     )
 
 
-def get_commerce_tool_engine():
+def get_commerce_tool_engine(settings: Settings | None = None):
     """Get the ToolEngine with product/order tools (lazy import).
 
     Tools are lightweight closures bound to settings; the heavy retriever is
     resolved lazily inside the tool call, so building the engine per request
-    is cheap.
+    is cheap. Returns None when commerce tools are disabled via runtime
+    config, in which case the RAG pipeline skips tool calling entirely.
     """
     from compact_rag.tool.commerce import build_commerce_tools
     from compact_rag.tool.engine import ToolEngine
 
-    settings = _cached_settings()
+    resolved = settings or _cached_settings()
+    from compact_rag.config.runtime import effective_settings
+
+    effective, commerce_enabled = effective_settings(resolved)
+    if not commerce_enabled:
+        return None
     return ToolEngine(
-        build_commerce_tools(settings.products, settings.order),
+        build_commerce_tools(effective.products, effective.order),
         max_retries=2,
     )
 

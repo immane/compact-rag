@@ -245,6 +245,32 @@ class AdminAPIClient:
                     except json.JSONDecodeError:
                         continue
 
+    # ── Commerce / Tools config ─────────────────────────────
+
+    def get_commerce_config(self) -> dict:
+        return self._get("/v1/config/commerce")
+
+    def update_commerce_config(self, patch: dict) -> dict:
+        return self._post("/v1/config/commerce", json=patch)
+
+    def test_product_lookup(self, disease: str, top_k: int = 5) -> dict:
+        return self._post(
+            "/v1/config/commerce/test-lookup",
+            json={"disease": disease, "top_k": top_k},
+        )
+
+    def test_order_link(
+        self, product_id: str, quantity: int = 1, product_name: str = ""
+    ) -> dict:
+        return self._post(
+            "/v1/config/commerce/test-order-link",
+            json={
+                "product_id": product_id,
+                "quantity": quantity,
+                "product_name": product_name,
+            },
+        )
+
     # ── API Keys ────────────────────────────────────────────
 
     def list_api_keys(self, page: int = 1, page_size: int = 20) -> dict:

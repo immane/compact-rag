@@ -107,6 +107,7 @@ def create_app(settings=None) -> FastAPI:
     from compact_rag.api.routers.conversations import router as conversations_router
     from compact_rag.api.routers.ingestion import router as ingestion_router
     from compact_rag.api.routers.api_keys import router as api_keys_router
+    from compact_rag.api.routers.tools import router as tools_router
 
     app.include_router(system_router, prefix="/v1")
     app.include_router(collections_router, prefix="/v1")
@@ -115,6 +116,7 @@ def create_app(settings=None) -> FastAPI:
     app.include_router(conversations_router, prefix="/v1")
     app.include_router(ingestion_router, prefix="/v1")
     app.include_router(api_keys_router, prefix="/v1")
+    app.include_router(tools_router, prefix="/v1")
 
     return app
 

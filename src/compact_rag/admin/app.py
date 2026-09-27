@@ -116,6 +116,7 @@ PAGES = {
     "🎮 Playground": "playground",
     "🔑 API Keys": "api_keys",
     "💾 Storage": "storage",
+    "🛠️ Tools": "tools",
 }
 
 st.sidebar.caption("WORKSPACE")
@@ -148,6 +149,8 @@ def _render_page(module_name: str) -> None:
             from compact_rag.admin.pages.api_keys import render as render_page
         elif module_name == "storage":
             from compact_rag.admin.pages.storage import render as render_page
+        elif module_name == "tools":
+            from compact_rag.admin.pages.tools import render as render_page
         else:
             st.error(f"Unknown page: {module_name}")
             return
