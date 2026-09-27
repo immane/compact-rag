@@ -42,7 +42,11 @@ def render(client: AdminAPIClient) -> None:
                     st.markdown(f"**{title}**")
                     st.caption(f"Model: {model} | {created[:10]}")
                 with cols[1]:
-                    st.metric("Messages", msg_count)
+                    st.markdown(
+                        '<div class="rag-mini-stat"><span>Messages</span>'
+                        f"<strong>{msg_count}</strong></div>",
+                        unsafe_allow_html=True,
+                    )
                 with cols[2]:
                     detail_key = f"conv_detail_{conv_id}"
                     if st.button("🔍 View", key=f"conv_view_{conv_id}"):
@@ -64,7 +68,10 @@ def render(client: AdminAPIClient) -> None:
 
                             messages = conv_detail.get("messages", [])
 
-                            st.subheader(f"📝 {title}")
+                            st.markdown(
+                                '<div class="rag-transcript-heading">Conversation transcript</div>',
+                                unsafe_allow_html=True,
+                            )
                             export_col1, export_col2, export_col3 = st.columns(3)
                             with export_col1:
                                 if st.button("📥 JSON", key=f"json_{conv_id}"):
@@ -115,28 +122,29 @@ def render(client: AdminAPIClient) -> None:
                                     st.session_state["conv_detail_data"] = None
                                     st.rerun()
 
-                            for msg in messages:
-                                role_icon = "🧑" if msg.get("role") == "user" else "🤖"
-                                st.markdown(
-                                    f"{role_icon} **{msg.get('role', '').upper()}** — {msg.get('created_at', '')[:19]}"
-                                )
-                                st.markdown(msg.get("content", ""))
-                                sources = msg.get("sources")
-                                if sources:
-                                    with st.expander("📎 Sources"):
-                                        src_data = (
-                                            json.loads(sources)
-                                            if isinstance(sources, str)
-                                            else sources
-                                        )
-                                        if isinstance(src_data, list):
-                                            for src in src_data:
-                                                st.caption(
-                                                    f"- {src.get('filename', '?')} (score: {src.get('score', 0):.3f})"
-                                                )
-                                        else:
-                                            st.json(src_data)
-                                st.divider()
+                            with st.container(key="conversation-transcript"):
+                                for msg in messages:
+                                    role_icon = "🧑" if msg.get("role") == "user" else "🤖"
+                                    st.markdown(
+                                        f"{role_icon} **{msg.get('role', '').upper()}** — {msg.get('created_at', '')[:19]}"
+                                    )
+                                    st.markdown(msg.get("content", ""))
+                                    sources = msg.get("sources")
+                                    if sources:
+                                        with st.expander("📎 Sources"):
+                                            src_data = (
+                                                json.loads(sources)
+                                                if isinstance(sources, str)
+                                                else sources
+                                            )
+                                            if isinstance(src_data, list):
+                                                for src in src_data:
+                                                    st.caption(
+                                                        f"- {src.get('filename', '?')} (score: {src.get('score', 0):.3f})"
+                                                    )
+                                            else:
+                                                st.json(src_data)
+                                    st.divider()
                         except Exception as e:
                             st.error(f"Failed to load conversation: {e}")
 

@@ -96,6 +96,55 @@ def apply_theme() -> None:
         .rag-config-row:last-child { border-bottom: 0; }
         .rag-config-row span { color: light-dark(#647691, #aabbd2); }
         .rag-config-row strong { color: light-dark(#172b4d, #edf3ff); text-align: right; overflow-wrap: anywhere; }
+        .rag-mini-stat {
+            display: flex;
+            flex-direction: column;
+            gap: .15rem;
+            padding: .35rem .6rem;
+            border-left: 1px solid light-dark(#e3eaf5, #34445f);
+        }
+        .rag-mini-stat span {
+            color: light-dark(#647691, #aabbd2);
+            font-size: .72rem;
+            line-height: 1.2;
+        }
+        .rag-mini-stat strong {
+            color: light-dark(#172b4d, #edf3ff);
+            font-size: 1rem;
+            font-weight: 650;
+            line-height: 1.25;
+        }
+        .rag-transcript-heading {
+            color: light-dark(#647691, #aabbd2);
+            font-size: .78rem;
+            font-weight: 700;
+            letter-spacing: .08em;
+            margin: .5rem 0 1rem;
+            text-transform: uppercase;
+        }
+        .st-key-conversation-transcript [data-testid="stMarkdownContainer"] p,
+        .st-key-conversation-transcript [data-testid="stMarkdownContainer"] li {
+            font-size: .94rem;
+            line-height: 1.65;
+        }
+        .st-key-conversation-transcript [data-testid="stMarkdownContainer"] h1 {
+            font-size: 1.28rem;
+            letter-spacing: -.02em;
+        }
+        .st-key-conversation-transcript [data-testid="stMarkdownContainer"] h2 {
+            font-size: 1.16rem;
+            letter-spacing: -.015em;
+        }
+        .st-key-conversation-transcript [data-testid="stMarkdownContainer"] h3 {
+            font-size: 1.04rem;
+            letter-spacing: 0;
+        }
+        .st-key-conversation-transcript [data-testid="stMarkdownContainer"] h4,
+        .st-key-conversation-transcript [data-testid="stMarkdownContainer"] h5,
+        .st-key-conversation-transcript [data-testid="stMarkdownContainer"] h6 {
+            font-size: .96rem;
+            letter-spacing: 0;
+        }
         @media (max-width: 720px) {
             [data-testid="stMainBlockContainer"] { padding-top: 1.5rem; }
         }
