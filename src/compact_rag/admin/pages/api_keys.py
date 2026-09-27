@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
+from html import escape
+
 import streamlit as st
 
 from compact_rag.admin.client import AdminAPIClient
+from compact_rag.admin.components.display import render_page_intro, render_page_subtitle
 from compact_rag.admin.components.status import render_status_badge
 
 
 def render(client: AdminAPIClient) -> None:
+    render_page_intro("Workspace / Access")
     st.title("🔑 API Keys")
+    render_page_subtitle("Manage credentials and permissions for API clients.")
 
     with st.expander("➕ Create API Key", expanded=False):
         with st.form("create_key_form"):
@@ -34,8 +39,6 @@ def render(client: AdminAPIClient) -> None:
                 except Exception as e:
                     st.error(f"Failed: {e}")
 
-    st.markdown("---")
-
     page = st.number_input("Page", min_value=1, value=1, key="key_page")
 
     try:
@@ -43,9 +46,7 @@ def render(client: AdminAPIClient) -> None:
         items = data.get("data", [])
         pagination = data.get("pagination", {})
 
-        st.caption(
-            f"Total: {pagination.get('total', 0)} key(s) | Page {page}/{pagination.get('total_pages', 0)}"
-        )
+        st.caption(f"{pagination.get('total', 0)} keys · Page {page} of {pagination.get('total_pages', 1) or 1}")
 
         if not items:
             st.info("No API keys found")
@@ -60,12 +61,12 @@ def render(client: AdminAPIClient) -> None:
             created = key.get("created_at", "")
             expires = key.get("expires_at", "")
 
-            with st.container():
-                cols = st.columns([3, 1, 1, 1])
+            with st.container(border=True):
+                cols = st.columns([3.1, 1, 1.5, 1.5], vertical_alignment="center")
                 with cols[0]:
-                    st.markdown(f"**{key_name}**")
-                    st.code(f"{key_prefix}")
-                    st.caption(f"Permissions: {', '.join(permissions)}")
+                    st.markdown(f'<div class="rag-card-title">{escape(key_name)}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="rag-mono">{escape(key_prefix)}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="rag-card-description">{escape(", ".join(permissions))}</div>', unsafe_allow_html=True)
                 with cols[1]:
                     status = "active" if is_active else "inactive"
                     st.markdown(render_status_badge(status), unsafe_allow_html=True)
@@ -108,6 +109,5 @@ def render(client: AdminAPIClient) -> None:
                             ):
                                 st.session_state[delete_key] = False
                                 st.rerun()
-                st.divider()
     except Exception as e:
         st.error(f"Failed to load API keys: {e}")

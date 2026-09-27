@@ -2,13 +2,22 @@
 
 from __future__ import annotations
 
+from html import escape
+
 import streamlit as st
 
 from compact_rag.admin.client import AdminAPIClient
+from compact_rag.admin.components.display import (
+    render_compact_stat,
+    render_page_intro,
+    render_page_subtitle,
+)
 
 
 def render(client: AdminAPIClient) -> None:
+    render_page_intro("Workspace / Knowledge base")
     st.title("📁 Collections")
+    render_page_subtitle("Organize indexed content into searchable collections.")
 
     with st.expander("➕ Create Collection", expanded=False):
         with st.form("create_collection_form"):
@@ -43,8 +52,6 @@ def render(client: AdminAPIClient) -> None:
                 except Exception as e:
                     st.error(f"Failed: {e}")
 
-    st.markdown("---")
-
     page = st.number_input("Page", min_value=1, value=1, key="coll_page")
     page_size = 20
 
@@ -55,7 +62,7 @@ def render(client: AdminAPIClient) -> None:
         total = pagination.get("total", 0)
         total_pages = pagination.get("total_pages", 0)
 
-        st.caption(f"Total: {total} collection(s) | Page {page}/{total_pages}")
+        st.caption(f"{total} collections · Page {page} of {total_pages or 1}")
 
         if not items:
             st.info("No collections found")
@@ -69,18 +76,18 @@ def render(client: AdminAPIClient) -> None:
             col_embed = item.get("embedding_model", "")
             created = item.get("created_at", "")
 
-            with st.container():
-                cols = st.columns([3, 1, 1, 1])
+            with st.container(border=True):
+                cols = st.columns([3.4, 1, 1.4, 1.1], vertical_alignment="center")
                 with cols[0]:
-                    st.markdown(f"**{col_name}**")
+                    st.markdown(f'<div class="rag-card-title">{escape(col_name)}</div>', unsafe_allow_html=True)
                     if col_desc:
-                        st.caption(col_desc)
-                    st.caption(f"Embedding: {col_embed}")
+                        st.markdown(f'<div class="rag-card-description">{escape(col_desc)}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="rag-card-description">Embedding · {escape(col_embed)}</div>', unsafe_allow_html=True)
                 with cols[1]:
-                    st.metric("Docs", col_docs)
+                    render_compact_stat("Documents", col_docs)
                 with cols[2]:
                     if created:
-                        st.caption(created[:10])
+                        st.markdown(f'<div class="rag-row-meta"><span>Created</span><strong>{created[:10]}</strong></div>', unsafe_allow_html=True)
                 with cols[3]:
                     delete_key = f"delete_col_{col_id}"
                     if delete_key not in st.session_state:
@@ -112,6 +119,5 @@ def render(client: AdminAPIClient) -> None:
                             ):
                                 st.session_state[delete_key] = False
                                 st.rerun()
-                st.divider()
     except Exception as e:
         st.error(f"Failed to load collections: {e}")

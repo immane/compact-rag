@@ -64,6 +64,15 @@ def apply_theme() -> None:
         }
         [data-testid="stMetricLabel"] { color: light-dark(#647691, #aabbd2); }
         [data-testid="stMetricValue"] { color: light-dark(#172b4d, #edf3ff); }
+        [data-testid="stMainBlockContainer"] [data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stHorizontalBlock"]) {
+            transition: box-shadow .16s ease, transform .16s ease;
+        }
+        [data-testid="stMainBlockContainer"] [data-testid="stVerticalBlockBorderWrapper"]:hover {
+            box-shadow: 0 8px 24px rgba(30, 60, 110, .07);
+        }
+        [data-testid="stMainBlockContainer"] [data-testid="stVerticalBlockBorderWrapper"] > div {
+            gap: .65rem;
+        }
         [data-testid="stMainBlockContainer"] [data-testid="stForm"],
         [data-testid="stMainBlockContainer"] [data-testid="stExpander"],
         [data-testid="stMainBlockContainer"] [data-testid="stDataFrame"] {
@@ -96,6 +105,62 @@ def apply_theme() -> None:
         .rag-config-row:last-child { border-bottom: 0; }
         .rag-config-row span { color: light-dark(#647691, #aabbd2); }
         .rag-config-row strong { color: light-dark(#172b4d, #edf3ff); text-align: right; overflow-wrap: anywhere; }
+        .rag-inline-stat {
+            display: flex;
+            flex-direction: column;
+            gap: .12rem;
+            padding: .15rem .35rem;
+            min-width: 5rem;
+        }
+        .rag-inline-stat span,
+        .rag-inline-stat small,
+        .rag-row-meta span {
+            color: light-dark(#647691, #aabbd2);
+            font-size: .72rem;
+            line-height: 1.3;
+        }
+        .rag-inline-stat strong,
+        .rag-row-meta strong {
+            color: light-dark(#172b4d, #edf3ff);
+            font-size: .92rem;
+            font-weight: 650;
+            line-height: 1.35;
+            overflow-wrap: anywhere;
+        }
+        .rag-inline-stat small { font-size: .68rem; }
+        .rag-row-meta {
+            display: flex;
+            flex-direction: column;
+            gap: .18rem;
+            padding: .2rem .35rem;
+        }
+        .rag-row-meta strong { font-size: .8rem; font-weight: 550; }
+        .rag-card-title {
+            color: light-dark(#172b4d, #edf3ff);
+            font-size: .96rem;
+            font-weight: 680;
+            line-height: 1.4;
+            overflow-wrap: anywhere;
+        }
+        .rag-card-description {
+            color: light-dark(#647691, #aabbd2);
+            font-size: .78rem;
+            line-height: 1.45;
+            overflow-wrap: anywhere;
+        }
+        .rag-mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: .76rem;
+            overflow-wrap: anywhere;
+        }
+        .rag-list-card [data-testid="stVerticalBlockBorderWrapper"] {
+            margin-bottom: .55rem;
+        }
+        .rag-table [data-testid="stDataFrame"] {
+            border: 1px solid light-dark(#e3eaf5, #34445f);
+            border-radius: .8rem;
+            overflow: hidden;
+        }
         .rag-mini-stat {
             display: flex;
             flex-direction: column;

@@ -26,7 +26,7 @@ _STATUS_COLORS: dict[str, str] = {
 def render_status_badge(status: str) -> str:
     color = _STATUS_COLORS.get(status.lower(), "#6c757d")
     return (
-        f'<span style="display:inline-block;padding:5px 10px;border-radius:8px;'
+        f'<span style="display:inline-block;padding:4px 9px;border-radius:8px;'
         f'background-color:{color};color:white;font-size:12px;font-weight:700;'
-        f'letter-spacing:.03em;">{escape(status.upper())}</span>'
+        f'letter-spacing:.03em;white-space:nowrap;">{escape(status.upper())}</span>'
     )

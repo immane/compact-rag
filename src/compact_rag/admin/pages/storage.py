@@ -2,13 +2,22 @@
 
 from __future__ import annotations
 
+from html import escape
+
 import streamlit as st
 
 from compact_rag.admin.client import AdminAPIClient
+from compact_rag.admin.components.display import (
+    render_compact_stat,
+    render_page_intro,
+    render_page_subtitle,
+)
 
 
 def render(client: AdminAPIClient) -> None:
+    render_page_intro("Workspace / Files")
     st.title("💾 Storage")
+    render_page_subtitle("Review stored files, usage, and temporary-file cleanup.")
 
     col1, col2, col3 = st.columns(3)
 
@@ -31,13 +40,11 @@ def render(client: AdminAPIClient) -> None:
             persistent_files += 1
 
     with col1:
-        st.metric("Total Files", total_files)
+        render_compact_stat("Total files", total_files)
     with col2:
-        st.metric("Total Size", f"{total_size / 1024 / 1024:.1f} MB")
+        render_compact_stat("Total size", f"{total_size / 1024 / 1024:.1f} MB")
     with col3:
-        st.metric("Temp Files", temp_files, delta=f"{persistent_files} persistent")
-
-    st.markdown("---")
+        render_compact_stat("Temporary", temp_files, f"{persistent_files} persistent")
 
     type_filter = st.selectbox(
         "Type", ["all", "persistent", "temp"], key="storage_type_filter"
@@ -57,16 +64,13 @@ def render(client: AdminAPIClient) -> None:
             storage_type = f_item.get("storage_type", "?")
             content_type = f_item.get("content_type", "")
 
-            with st.container():
-                cols = st.columns([3, 1, 1, 1])
+            with st.container(border=True):
+                cols = st.columns([3.2, 1.3, 1.1, .8], vertical_alignment="center")
                 with cols[0]:
-                    st.markdown(f"**{filename}**")
-                    st.caption(f"Key: {storage_key}")
-                    st.caption(
-                        f"Type: {content_type or 'unknown'} | Size: {file_size / 1024:.1f} KB"
-                    )
+                    st.markdown(f'<div class="rag-card-title">{escape(filename)}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="rag-mono">{escape(storage_key)}</div>', unsafe_allow_html=True)
                 with cols[1]:
-                    st.caption(storage_type)
+                    st.markdown(f'<div class="rag-row-meta"><span>{escape(storage_type.title())}</span><strong>{escape(content_type or "Unknown type")}</strong><span>{file_size / 1024:.1f} KB</span></div>', unsafe_allow_html=True)
                 with cols[2]:
                     url = client.get_file_url(storage_key)
                     st.link_button("🔗 Download", url)
@@ -78,9 +82,6 @@ def render(client: AdminAPIClient) -> None:
                             st.rerun()
                         except Exception as e:
                             st.error(f"Failed: {e}")
-                st.divider()
-
-    st.markdown("---")
 
     st.subheader("🧹 Temp File Cleanup")
     if st.button("Clean Expired Temp Files", type="primary"):

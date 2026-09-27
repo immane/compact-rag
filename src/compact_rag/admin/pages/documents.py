@@ -2,14 +2,23 @@
 
 from __future__ import annotations
 
+from html import escape
+
 import streamlit as st
 
 from compact_rag.admin.client import AdminAPIClient
+from compact_rag.admin.components.display import (
+    render_compact_stat,
+    render_page_intro,
+    render_page_subtitle,
+)
 from compact_rag.admin.components.status import render_status_badge
 
 
 def render(client: AdminAPIClient) -> None:
+    render_page_intro("Workspace / Documents")
     st.title("📄 Documents")
+    render_page_subtitle("Review ingestion status, metadata, and indexed content.")
 
     with st.expander("📤 Upload Document", expanded=False):
         uploaded_file = st.file_uploader(
@@ -31,8 +40,6 @@ def render(client: AdminAPIClient) -> None:
                 st.rerun()
             except Exception as e:
                 st.error(f"Upload failed: {e}")
-
-    st.markdown("---")
 
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -61,9 +68,7 @@ def render(client: AdminAPIClient) -> None:
         items = data.get("data", [])
         pagination = data.get("pagination", {})
 
-        st.caption(
-            f"Total: {pagination.get('total', 0)} document(s) | Page {page}/{pagination.get('total_pages', 0)}"
-        )
+        st.caption(f"{pagination.get('total', 0)} documents · Page {page} of {pagination.get('total_pages', 1) or 1}")
 
         if not items:
             st.info("No documents found")
@@ -79,21 +84,23 @@ def render(client: AdminAPIClient) -> None:
             page_count = doc.get("page_count") or 0
             error_msg = doc.get("error_message", "")
 
-            with st.container():
-                cols = st.columns([3, 1, 1, 1, 1])
+            with st.container(border=True):
+                cols = st.columns([3.1, 1, .9, .9, 1.25], vertical_alignment="center")
                 with cols[0]:
-                    st.markdown(f"**{filename}**")
-                    st.caption(
-                        f"ID: {doc_id[:8]}... | Type: {file_type} | Pages: {page_count}"
+                    st.markdown(f'<div class="rag-card-title">{escape(filename)}</div>', unsafe_allow_html=True)
+                    st.markdown(
+                        f'<div class="rag-card-description">{escape(file_type.upper() or "FILE")} · '
+                        f'{page_count} pages · ID {escape(doc_id[:8])}</div>',
+                        unsafe_allow_html=True,
                     )
                     if error_msg:
-                        st.caption(f"Error: {error_msg}")
+                        st.error(error_msg)
                 with cols[1]:
                     st.markdown(render_status_badge(status), unsafe_allow_html=True)
                 with cols[2]:
-                    st.caption(f"Chunks: {chunks}")
+                    render_compact_stat("Chunks", chunks)
                 with cols[3]:
-                    st.caption(f"Tables: {tables}")
+                    render_compact_stat("Tables", tables)
                 with cols[4]:
                     detail_key = f"detail_{doc_id}"
                     if st.button("🔍 Detail", key=f"detail_btn_{doc_id}"):
@@ -138,6 +145,5 @@ def render(client: AdminAPIClient) -> None:
                         ):
                             st.session_state[delete_key] = False
                             st.rerun()
-                st.divider()
     except Exception as e:
         st.error(f"Failed to load documents: {e}")

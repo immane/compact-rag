@@ -2,14 +2,23 @@
 
 from __future__ import annotations
 
+from html import escape
+
 import streamlit as st
 
 from compact_rag.admin.client import AdminAPIClient
+from compact_rag.admin.components.display import (
+    render_compact_stat,
+    render_page_intro,
+    render_page_subtitle,
+)
 from compact_rag.admin.components.status import render_status_badge
 
 
 def render(client: AdminAPIClient) -> None:
+    render_page_intro("Workspace / Processing")
     st.title("⚙️ Ingestion Jobs")
+    render_page_subtitle("Monitor document and API-source synchronization jobs.")
 
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -32,9 +41,7 @@ def render(client: AdminAPIClient) -> None:
         items = data.get("data", [])
         pagination = data.get("pagination", {})
 
-        st.caption(
-            f"Total: {pagination.get('total', 0)} job(s) | Page {page}/{pagination.get('total_pages', 0)}"
-        )
+        st.caption(f"{pagination.get('total', 0)} jobs · Page {page} of {pagination.get('total_pages', 1) or 1}")
 
         if not items:
             st.info("No ingestion jobs found")
@@ -57,16 +64,12 @@ def render(client: AdminAPIClient) -> None:
             if status == "completed" and total_chunks == 0:
                 display_chunks = None
 
-            with st.container():
-                cols = st.columns([2, 1, 2, 1])
+            with st.container(border=True):
+                cols = st.columns([2.2, 1, 2.2, 1.4], vertical_alignment="center")
                 with cols[0]:
-                    st.markdown(f"**Job:** {job_id[:12]}...")
+                    st.markdown(f'<div class="rag-card-title">Job {escape(job_id[:12])}</div>', unsafe_allow_html=True)
                     collection_id = job.get("collection_id", "")
-                    st.caption(
-                        f"Collection: {collection_id[:8]}..."
-                        if collection_id
-                        else "Collection: -"
-                    )
+                    st.markdown(f'<div class="rag-card-description">Collection · {escape(collection_id[:12] or "-")}</div>', unsafe_allow_html=True)
                 with cols[1]:
                     st.markdown(render_status_badge(status), unsafe_allow_html=True)
                 with cols[2]:
@@ -75,9 +78,7 @@ def render(client: AdminAPIClient) -> None:
                         st.progress(
                             progress, text=f"Files: {display_processed}/{total_files}"
                         )
-                    st.caption(
-                        f"Chunks: {display_chunks if display_chunks is not None else '-'}"
-                    )
+                    render_compact_stat("Chunks", display_chunks if display_chunks is not None else "-")
                 with cols[3]:
                     if started or created:
                         st.caption(f"Started: {(started or created)[:19]}")
@@ -89,6 +90,5 @@ def render(client: AdminAPIClient) -> None:
                         for err in errors:
                             st.warning(str(err))
 
-                st.divider()
     except Exception as e:
         st.error(f"Failed to load ingestion jobs: {e}")

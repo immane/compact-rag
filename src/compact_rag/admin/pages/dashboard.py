@@ -7,16 +7,18 @@ from html import escape
 import streamlit as st
 
 from compact_rag.admin.client import AdminAPIClient
+from compact_rag.admin.components.display import (
+    render_compact_stat,
+    render_page_intro,
+    render_page_subtitle,
+)
 from compact_rag.admin.components.status import render_status_badge
 
 
 def render(client: AdminAPIClient) -> None:
-    st.markdown('<div class="rag-eyebrow">Workspace / Overview</div>', unsafe_allow_html=True)
+    render_page_intro("Workspace / Overview")
     st.title("📊 Dashboard")
-    st.markdown(
-        '<p class="rag-subtitle">Monitor your knowledge base and service health at a glance.</p>',
-        unsafe_allow_html=True,
-    )
+    render_page_subtitle("Monitor your knowledge base and service health at a glance.")
 
     try:
         health_data = client.health()
@@ -105,9 +107,6 @@ def render(client: AdminAPIClient) -> None:
             st.subheader("⚡ Recent Ingestion Jobs")
             st.caption("Latest document processing activity")
             if recent_jobs:
-                import pandas as pd
-
-                rows = []
                 for j in recent_jobs[:5]:
                     total_files = j.get("total_files", 0)
                     processed_files = j.get("processed_files", 0)
@@ -120,15 +119,17 @@ def render(client: AdminAPIClient) -> None:
                         processed_files = total_files
                     if j.get("status") == "completed" and total_chunks == 0:
                         total_chunks = "-"
-                    rows.append(
-                        {
-                            "ID": j.get("id", "")[:8],
-                            "Status": j.get("status", "pending"),
-                            "Progress": f"{processed_files}/{total_files}",
-                            "Chunks": total_chunks,
-                        }
-                    )
-                st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+                    with st.container(border=True):
+                        row = st.columns([1.7, 1.2, 1.8, .8], vertical_alignment="center")
+                        with row[0]:
+                            st.markdown(f'<div class="rag-card-title">Job {escape(j.get("id", "")[:8])}</div>', unsafe_allow_html=True)
+                        with row[1]:
+                            st.markdown(render_status_badge(j.get("status", "pending")), unsafe_allow_html=True)
+                        with row[2]:
+                            progress = min(processed_files / total_files, 1.0) if total_files else 0.0
+                            st.progress(progress, text=f"{processed_files} / {total_files} files")
+                        with row[3]:
+                            render_compact_stat("Chunks", total_chunks)
             else:
                 st.info("No ingestion jobs yet. Upload a document to get started.")
 

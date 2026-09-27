@@ -3,16 +3,20 @@
 from __future__ import annotations
 
 import csv
+from html import escape
 import io
 import json
 
 import streamlit as st
 
 from compact_rag.admin.client import AdminAPIClient
+from compact_rag.admin.components.display import render_page_intro, render_page_subtitle
 
 
 def render(client: AdminAPIClient) -> None:
+    render_page_intro("Workspace / Conversations")
     st.title("💬 Conversations")
+    render_page_subtitle("Browse conversation history and inspect source citations.")
 
     page = st.number_input("Page", min_value=1, value=1, key="conv_page")
 
@@ -36,11 +40,11 @@ def render(client: AdminAPIClient) -> None:
             msg_count = conv.get("message_count", 0)
             created = conv.get("created_at", "")
 
-            with st.container():
-                cols = st.columns([3, 1, 1, 1, 1])
+            with st.container(border=True):
+                cols = st.columns([3.3, 1, 1.1, .8], vertical_alignment="center")
                 with cols[0]:
-                    st.markdown(f"**{title}**")
-                    st.caption(f"Model: {model} | {created[:10]}")
+                    st.markdown(f'<div class="rag-card-title">{escape(title)}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="rag-card-description">{escape(model)} · {escape(created[:10])}</div>', unsafe_allow_html=True)
                 with cols[1]:
                     st.markdown(
                         '<div class="rag-mini-stat"><span>Messages</span>'
@@ -58,7 +62,7 @@ def render(client: AdminAPIClient) -> None:
                         st.rerun()
 
                 if st.session_state.get(detail_key):
-                    with st.container():
+                    with st.container(border=True):
                         try:
                             if st.session_state.get("conv_detail_data") is None:
                                 conv_detail = client.get_conversation(conv_id)
@@ -125,26 +129,31 @@ def render(client: AdminAPIClient) -> None:
                             with st.container(key="conversation-transcript"):
                                 for msg in messages:
                                     role_icon = "🧑" if msg.get("role") == "user" else "🤖"
-                                    st.markdown(
-                                        f"{role_icon} **{msg.get('role', '').upper()}** — {msg.get('created_at', '')[:19]}"
-                                    )
-                                    st.markdown(msg.get("content", ""))
-                                    sources = msg.get("sources")
-                                    if sources:
-                                        with st.expander("📎 Sources"):
-                                            src_data = (
-                                                json.loads(sources)
-                                                if isinstance(sources, str)
-                                                else sources
-                                            )
-                                            if isinstance(src_data, list):
-                                                for src in src_data:
-                                                    st.caption(
-                                                        f"- {src.get('filename', '?')} (score: {src.get('score', 0):.3f})"
-                                                    )
-                                            else:
-                                                st.json(src_data)
-                                    st.divider()
+                                    with st.container(border=True):
+                                        st.markdown(
+                                            f'<div class="rag-message-meta">{role_icon} '
+                                            f'{escape(msg.get("role", "").upper())} · '
+                                            f'{escape(msg.get("created_at", "")[:19])}</div>',
+                                            unsafe_allow_html=True,
+                                        )
+                                        st.markdown(msg.get("content", ""))
+                                        sources = msg.get("sources")
+                                        if sources:
+                                            with st.expander("📎 Sources"):
+                                                src_data = (
+                                                    json.loads(sources)
+                                                    if isinstance(sources, str)
+                                                    else sources
+                                                )
+                                                if isinstance(src_data, list):
+                                                    for src in src_data:
+                                                        st.markdown(
+                                                            f'<div class="rag-row-meta"><strong>{escape(str(src.get("filename", "?")))}</strong>'
+                                                            f'<span>Relevance {src.get("score", 0):.3f}</span></div>',
+                                                            unsafe_allow_html=True,
+                                                        )
+                                                else:
+                                                    st.json(src_data)
                         except Exception as e:
                             st.error(f"Failed to load conversation: {e}")
 
@@ -174,6 +183,5 @@ def render(client: AdminAPIClient) -> None:
                             ):
                                 st.session_state[delete_key] = False
                                 st.rerun()
-                st.divider()
     except Exception as e:
         st.error(f"Failed to load conversations: {e}")

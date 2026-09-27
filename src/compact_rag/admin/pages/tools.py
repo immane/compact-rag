@@ -137,30 +137,29 @@ def _render_sources(client: AdminAPIClient) -> None:
                 if last
                 else "never synced"
             )
-            c1, c2, c3, c4 = st.columns([3, 2, 2, 2])
-            with c1:
-                status = "🟢" if s.get("enabled") else "⚪"
-                st.markdown(f"**{status} {name}** → `{s.get('collection', '')}`")
-                st.caption(f"Last sync: {s.get('last_sync') or '-'} · {summary}")
-            with c2:
-                if st.button("🔄 Sync", key=f"sync_{name}"):
-                    try:
-                        with st.spinner(f"Syncing {name}…"):
-                            result = client.sync_sources(source=name)
-                        st.json(result)
-                    except Exception as e:
-                        st.error(f"Sync failed: {e}")
-            with c3:
-                if st.button("🗑️ Delete", key=f"del_src_{name}"):
-                    try:
-                        client.delete_source(name)
-                        st.success(f"Deleted '{name}'")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Delete failed: {e}")
-            with c4:
-                st.caption(f"token: {'✅' if s.get('auth_token_configured') else '❌'}")
-            st.divider()
+            with st.container(border=True):
+                c1, c2, c3 = st.columns([3.5, 1, 1], vertical_alignment="center")
+                with c1:
+                    status = "Enabled" if s.get("enabled") else "Disabled"
+                    st.markdown(f'<div class="rag-card-title">{name} <span class="rag-card-description">· {status}</span></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="rag-card-description">Collection · {s.get("collection", "")}</div>', unsafe_allow_html=True)
+                    st.caption(f"Last sync: {s.get('last_sync') or 'Never'} · {summary} · token {'configured' if s.get('auth_token_configured') else 'not configured'}")
+                with c2:
+                    if st.button("🔄 Sync", key=f"sync_{name}"):
+                        try:
+                            with st.spinner(f"Syncing {name}…"):
+                                result = client.sync_sources(source=name)
+                            st.json(result)
+                        except Exception as e:
+                            st.error(f"Sync failed: {e}")
+                with c3:
+                    if st.button("🗑️ Delete", key=f"del_src_{name}"):
+                        try:
+                            client.delete_source(name)
+                            st.success(f"Deleted '{name}'")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Delete failed: {e}")
 
         if st.button("🔄 Sync All Enabled", key="sync_all"):
             try:
