@@ -57,12 +57,8 @@ class ChatCitation(BaseModel):
     content_snippet: str = ""
 
 
-class ChatOrderLink(BaseModel):
-    product_id: str = ""
-    product_name: str = ""
-    quantity: int = 1
+class ChatToolLink(BaseModel):
     url: str = ""
-    expires_at: str | None = None
     source: str = ""
 
 
@@ -70,7 +66,7 @@ class ChatMessageResponse(BaseModel):
     role: str = "assistant"
     content: str = ""
     citations: list[ChatCitation] = Field(default_factory=list)
-    order_links: list[ChatOrderLink] = Field(default_factory=list)
+    tool_links: list[ChatToolLink] = Field(default_factory=list)
 
 
 class ChatChoice(BaseModel):
@@ -233,55 +229,6 @@ class ApiKeyUpdateRequest(BaseModel):
     is_active: bool | None = None
     name: str | None = None
     permissions: list[str] | None = None
-
-
-# ── Commerce / Tools config (admin-managed runtime overrides) ──
-
-
-class ProductsConfigUpdate(BaseModel):
-    collection: str | None = None
-    top_k: int | None = Field(default=None, ge=1, le=50)
-    api_base: str | None = None
-    # Secrets: absent or "" keeps the stored value; non-empty overwrites.
-    api_key: str | None = None
-
-
-class OrderConfigUpdate(BaseModel):
-    api_base: str | None = None
-    api_key: str | None = None
-    create_path: str | None = None
-    url_template: str | None = None
-    signing_secret: str | None = None
-    link_ttl_minutes: int | None = Field(default=None, gt=0)
-
-
-class CommerceConfigUpdate(BaseModel):
-    commerce_enabled: bool | None = None
-    products: ProductsConfigUpdate | None = None
-    order: OrderConfigUpdate | None = None
-
-
-class CommerceToolInfo(BaseModel):
-    name: str
-    description: str = ""
-
-
-class CommerceConfigResponse(BaseModel):
-    commerce_enabled: bool = True
-    products: dict = Field(default_factory=dict)
-    order: dict = Field(default_factory=dict)
-    tools: list[CommerceToolInfo] = Field(default_factory=list)
-
-
-class TestLookupRequest(BaseModel):
-    disease: str
-    top_k: int = Field(default=5, ge=1, le=20)
-
-
-class TestOrderLinkRequest(BaseModel):
-    product_id: str
-    quantity: int = Field(default=1, ge=1, le=999)
-    product_name: str = ""
 
 
 # ── Health / System ────────────────────────────────────────────

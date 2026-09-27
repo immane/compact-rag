@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from compact_rag.config.runtime import (
-    effective_settings,
     get_runtime_config_path,
     load_runtime_config,
-    masked_commerce_view,
+    masked_dynamic_tools_view,
+    save_dynamic_tools,
     save_runtime_config,
 )
 from compact_rag.config.settings import (
@@ -38,20 +38,21 @@ class TestSaveLoad:
     def test_roundtrip_and_file_permissions(self, tmp_path):
         settings = _settings(tmp_path)
         saved = save_runtime_config(
-            settings, {"commerce_enabled": False, "products": {"collection": "meds"}}
+            settings, {"tools_enabled": False, "tools": []}
         )
-        assert saved["commerce_enabled"] is False
+        assert saved["tools_enabled"] is False
         assert load_runtime_config(settings) == saved
         path = get_runtime_config_path(settings)
         assert path.exists()
         assert oct(path.stat().st_mode & 0o777) == "0o600"
 
-    def test_deep_merge(self, tmp_path):
+    def test_tool_list_patch_replaces_list(self, tmp_path):
         settings = _settings(tmp_path)
-        save_runtime_config(settings, {"products": {"collection": "a"}})
-        save_runtime_config(settings, {"products": {"top_k": 7}})
+        save_runtime_config(settings, {"tools": [{"name": "lookup", "headers": {"x-token": "a"}}]})
+        save_runtime_config(settings, {"tools": [{"name": "lookup", "top_k": 7}]})
         loaded = load_runtime_config(settings)
-        assert loaded["products"] == {"collection": "a", "top_k": 7}
+        # Lists are replaced as a whole; credential keep-on-empty is handled by save_dynamic_tools.
+        assert loaded["tools"] == [{"name": "lookup", "top_k": 7}]
 
     def test_unknown_keys_rejected(self, tmp_path):
         import pytest
@@ -67,43 +68,26 @@ class TestSaveLoad:
         assert load_runtime_config(settings) == {}
 
 
-class TestEffectiveSettings:
-    def test_defaults_without_overrides(self, tmp_path):
+class TestDynamicTools:
+    def test_masks_header_secrets(self, tmp_path):
         settings = _settings(tmp_path)
-        effective, enabled = effective_settings(settings)
-        assert enabled is True
-        assert effective.products.collection == "products"
-        assert effective.order.create_path == "/orders/link"
-        # Original untouched.
-        assert settings.products.collection == "products"
-
-    def test_overrides_applied(self, tmp_path):
-        settings = _settings(tmp_path)
-        save_runtime_config(
-            settings,
-            {
-                "commerce_enabled": False,
-                "products": {"collection": "meds", "top_k": 3},
-                "order": {"link_ttl_minutes": 10},
-            },
-        )
-        effective, enabled = effective_settings(settings)
-        assert enabled is False
-        assert effective.products.collection == "meds"
-        assert effective.products.top_k == 3
-        assert effective.order.link_ttl_minutes == 10
-
-    def test_masked_view_hides_secrets(self, tmp_path):
-        settings = _settings(tmp_path)
-        save_runtime_config(
-            settings,
-            {"order": {
-                "url_template": "https://x/{product_id}",
-                "signing_secret": "shh",
-            }},
-        )
-        view = masked_commerce_view(settings)
-        assert view["order"]["signing_secret_configured"] is True
+        save_dynamic_tools(settings, [{
+            "name": "lookup", "description": "Look up", "kind": "http",
+            "headers": {"x-auth-token": "shh"},
+        }])
+        view = masked_dynamic_tools_view(settings)
+        assert view[0]["headers"] == {"x-auth-token": ""}
+        assert view[0]["headers_configured"] == {"x-auth-token": True}
         assert "shh" not in str(view)
-        assert view["order"]["mode"] == "template"
-        assert view["order"]["url_template"] == "https://x/{product_id}"
+
+    def test_blank_header_keeps_previous_secret(self, tmp_path):
+        settings = _settings(tmp_path)
+        save_dynamic_tools(settings, [{
+            "name": "lookup", "description": "Look up", "kind": "http",
+            "headers": {"x-auth-token": "shh"},
+        }])
+        save_dynamic_tools(settings, [{
+            "name": "lookup", "description": "Look up", "kind": "http",
+            "headers": {"x-auth-token": ""},
+        }])
+        assert masked_dynamic_tools_view(settings)[0]["headers_configured"]["x-auth-token"]

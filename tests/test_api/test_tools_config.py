@@ -1,121 +1,107 @@
-"""Tests for commerce/tools configuration endpoints."""
+"""Tests for runtime-defined tools configuration and execution."""
 
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from compact_rag.api.deps import _cached_settings, get_commerce_tool_engine
+from compact_rag.api.deps import _cached_settings, get_tool_engine
 from compact_rag.api.router import create_app
-from compact_rag.storage.schema import SearchResult
 
 
 def _client(test_settings):
     _cached_settings.cache_clear()
     app = create_app(settings=test_settings)
-    with TestClient(app) as c:
-        yield c
+    with TestClient(app) as client:
+        yield client
 
 
-class TestCommerceConfigEndpoints:
-    def test_get_masked_defaults(self, test_settings):
-        for c in _client(test_settings):
-            resp = c.get("/v1/config/commerce")
-            assert resp.status_code == 200
-            body = resp.json()
-            assert body["commerce_enabled"] is True
-            assert body["products"]["collection"] == "products"
-            assert body["products"]["api_key_configured"] is False
-            assert body["order"]["mode"] == "unconfigured"
-            assert {t["name"] for t in body["tools"]} == {
-                "lookup_products",
-                "create_order_link",
+def _http_tool(**overrides):
+    definition = {
+        "name": "lookup_inventory",
+        "description": "Look up inventory by SKU",
+        "kind": "http",
+        "enabled": True,
+        "parameters": {
+            "type": "object",
+            "properties": {"sku": {"type": "string"}},
+            "required": ["sku"],
+        },
+        "method": "GET",
+        "url": "https://inventory.example.test/items/{{sku}}",
+        "headers": {"x-auth-token": "secret-token"},
+        "query": {},
+        "timeout": 5,
+    }
+    definition.update(overrides)
+    return definition
+
+
+class TestDynamicToolConfig:
+    def test_get_empty_and_engine_disabled_when_no_tools(self, test_settings):
+        for client in _client(test_settings):
+            response = client.get("/v1/config/tools")
+            assert response.status_code == 200
+            assert response.json() == {"enabled": True, "tools": []}
+            assert get_tool_engine(test_settings) is None
+
+    def test_put_and_secret_masking(self, test_settings):
+        for client in _client(test_settings):
+            response = client.put("/v1/config/tools", json={
+                "enabled": True,
+                "tools": [_http_tool()],
+            })
+            assert response.status_code == 200
+            tool = response.json()["tools"][0]
+            assert tool["name"] == "lookup_inventory"
+            assert tool["headers"] == {"x-auth-token": ""}
+            assert tool["headers_configured"] == {"x-auth-token": True}
+            assert "secret-token" not in response.text
+            engine = get_tool_engine(test_settings)
+            assert engine is not None
+            assert [t["function"]["name"] for t in engine.get_openai_tools()] == [
+                "lookup_inventory"
+            ]
+
+    def test_invalid_and_duplicate_tools_rejected(self, test_settings):
+        for client in _client(test_settings):
+            invalid = client.put("/v1/config/tools", json={"tools": [{"name": "bad name"}]})
+            assert invalid.status_code == 400
+            duplicate = client.put("/v1/config/tools", json={
+                "tools": [_http_tool(), _http_tool()],
+            })
+            assert duplicate.status_code == 400
+
+    def test_empty_header_keeps_existing_secret(self, test_settings):
+        for client in _client(test_settings):
+            client.put("/v1/config/tools", json={"tools": [_http_tool()]})
+            update = _http_tool(headers={"x-auth-token": ""})
+            client.put("/v1/config/tools", json={"tools": [update]})
+            configured = client.get("/v1/config/tools").json()["tools"][0]
+            assert configured["headers_configured"]["x-auth-token"] is True
+
+    def test_switch_off_disables_tool_engine(self, test_settings):
+        for client in _client(test_settings):
+            client.put("/v1/config/tools", json={"enabled": False, "tools": [_http_tool()]})
+            assert get_tool_engine(test_settings) is None
+
+    def test_vector_search_definition(self, test_settings):
+        for client in _client(test_settings):
+            tool = {
+                "name": "search_reports",
+                "description": "Search reports",
+                "kind": "vector_search",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"term": {"type": "string"}},
+                    "required": ["term"],
+                },
+                "collection": "reports",
+                "query_argument": "term",
             }
+            response = client.put("/v1/config/tools", json={"tools": [tool]})
+            assert response.status_code == 200
+            assert get_tool_engine(test_settings) is not None
 
-    def test_put_and_persist(self, test_settings):
-        for c in _client(test_settings):
-            resp = c.put("/v1/config/commerce", json={
-                "products": {"collection": "meds", "top_k": 3},
-                "order": {"link_ttl_minutes": 10},
-            })
-            assert resp.status_code == 200
-            body = c.get("/v1/config/commerce").json()
-            assert body["products"]["collection"] == "meds"
-            assert body["products"]["top_k"] == 3
-            assert body["order"]["link_ttl_minutes"] == 10
-
-    def test_put_empty_rejected(self, test_settings):
-        for c in _client(test_settings):
-            assert c.put("/v1/config/commerce", json={}).status_code == 400
-
-    def test_secret_empty_keeps_stored_value(self, test_settings):
-        for c in _client(test_settings):
-            c.put("/v1/config/commerce", json={
-                "order": {"signing_secret": "keep-me"}
-            })
-            assert c.get("/v1/config/commerce").json()["order"][
-                "signing_secret_configured"
-            ] is True
-            # Empty/absent secret must not clear the stored one.
-            c.put("/v1/config/commerce", json={
-                "order": {"url_template": "https://x/{product_id}", "signing_secret": ""}
-            })
-            body = c.get("/v1/config/commerce").json()["order"]
-            assert body["signing_secret_configured"] is True
-            assert body["mode"] == "template"
-
-    def test_master_switch_disables_engine(self, test_settings):
-        for c in _client(test_settings):
-            c.put("/v1/config/commerce", json={"commerce_enabled": False})
-            assert c.get("/v1/config/commerce").json()["commerce_enabled"] is False
-            assert get_commerce_tool_engine(test_settings) is None
-            c.put("/v1/config/commerce", json={"commerce_enabled": True})
-            assert get_commerce_tool_engine(test_settings) is not None
-
-    def test_order_link_dry_run_template(self, test_settings):
-        for c in _client(test_settings):
-            c.put("/v1/config/commerce", json={"order": {
-                "url_template": "https://shop.example.com/o?product={product_id}&qty={quantity}&exp={expires}&sig={signature}",
-                "signing_secret": "s",
-            }})
-            resp = c.post("/v1/config/commerce/test-order-link", json={
-                "product_id": "P1", "quantity": 2,
-            })
-            assert resp.status_code == 200
-            body = resp.json()
-            assert body["url"].startswith(
-                "https://shop.example.com/o?product=P1&qty=2"
-            )
-            assert body["source"] == "template"
-
-    def test_order_link_dry_run_unconfigured(self, test_settings):
-        for c in _client(test_settings):
-            resp = c.post("/v1/config/commerce/test-order-link", json={
-                "product_id": "P1",
-            })
-            assert resp.status_code == 200
-            assert resp.json()["url"] == ""
-            assert "error" in resp.json()
-
-    def test_lookup_dry_run_kb(self, test_settings, monkeypatch):
-        import compact_rag.tool.commerce as commerce
-
-        class FakeRetriever:
-            async def retrieve(self, **kwargs):
-                assert kwargs["collection"] == "meds"
-                return [SearchResult(
-                    id="c1", content="降压药", score=0.9,
-                    metadata={"product_id": "M1", "filename": "cat.pdf"},
-                )]
-
-        monkeypatch.setattr(
-            commerce, "_default_retriever_provider", lambda: FakeRetriever()
-        )
-        for c in _client(test_settings):
-            c.put("/v1/config/commerce", json={"products": {"collection": "meds"}})
-            resp = c.post("/v1/config/commerce/test-lookup", json={
-                "disease": "高血压",
-            })
-            assert resp.status_code == 200
-            body = resp.json()
-            assert body["source"] == "knowledge_base"
-            assert body["products"][0]["product_id"] == "M1"
+    def test_test_endpoint_unknown(self, test_settings):
+        for client in _client(test_settings):
+            assert client.post("/v1/config/tools/nope/test", json={}).status_code == 404

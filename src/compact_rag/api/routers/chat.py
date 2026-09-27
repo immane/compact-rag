@@ -17,7 +17,7 @@ from compact_rag.api.schemas import (
     ChatCompletionRequest,
     ChatCompletionResponse,
     ChatMessageResponse,
-    ChatOrderLink,
+    ChatToolLink,
     UsageInfo,
 )
 from compact_rag.common.logger import get_logger
@@ -109,16 +109,12 @@ async def chat_completions(
                         )
                         for c in response.citations
                     ],
-                    order_links=[
-                        ChatOrderLink(
-                            product_id=link.product_id,
-                            product_name=link.product_name,
-                            quantity=link.quantity,
+                    tool_links=[
+                        ChatToolLink(
                             url=link.url,
-                            expires_at=link.expires_at,
                             source=link.source,
                         )
-                        for link in response.order_links
+                        for link in response.tool_links
                     ],
                 ),
                 finish_reason="stop",
@@ -146,7 +142,7 @@ async def _stream_response(
         ):
             yield f"data: {json.dumps({'id': call_id, 'object': 'chat.completion.chunk', 'created': int(time.time()), 'model': request.model, 'choices': [{'index': 0, 'delta': {'content': chunk}, 'finish_reason': None}]})}\n\n"
 
-        # Send finish with citations and order links
+        # Send finish with citations and URLs returned by configured tools.
         citations = getattr(pipeline, "_last_stream_citations", [])
         citation_dicts = [
             {
@@ -159,19 +155,15 @@ async def _stream_response(
             }
             for c in citations
         ]
-        order_links = getattr(pipeline, "_last_stream_order_links", [])
-        order_link_dicts = [
+        tool_links = getattr(pipeline, "_last_stream_tool_links", [])
+        tool_link_dicts = [
             {
-                "product_id": link.product_id,
-                "product_name": link.product_name,
-                "quantity": link.quantity,
                 "url": link.url,
-                "expires_at": link.expires_at,
                 "source": link.source,
             }
-            for link in order_links
+            for link in tool_links
         ]
-        yield f"data: {json.dumps({'id': call_id, 'object': 'chat.completion.chunk', 'created': int(time.time()), 'model': request.model, 'choices': [{'index': 0, 'delta': {'citations': citation_dicts, 'order_links': order_link_dicts}, 'finish_reason': 'stop'}]})}\n\n"
+        yield f"data: {json.dumps({'id': call_id, 'object': 'chat.completion.chunk', 'created': int(time.time()), 'model': request.model, 'choices': [{'index': 0, 'delta': {'citations': citation_dicts, 'tool_links': tool_link_dicts}, 'finish_reason': 'stop'}]})}\n\n"
         yield "data: [DONE]\n\n"
 
         await session.commit()

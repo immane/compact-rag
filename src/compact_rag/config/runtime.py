@@ -1,7 +1,7 @@
 """Runtime (admin-managed) configuration overrides.
 
-File/env/YAML settings are static; the admin console needs to tweak product
-lookup and order-link settings without redeploying. Overrides are stored as
+File/env/YAML settings are static; the admin console needs to tweak runtime
+tool and data-source definitions without redeploying. Overrides are stored as
 JSON in the data directory (which is a persisted volume in Docker)::
 
     <data>/runtime_config.json      # e.g. data/runtime_config.json
@@ -9,10 +9,9 @@ JSON in the data directory (which is a persisted volume in Docker)::
 Shape::
 
     {
-      "commerce_enabled": true,
-      "products": {"collection": ..., "top_k": ..., "api_base": ..., "api_key": ...},
-      "order": {"api_base": ..., "api_key": ..., "create_path": ...,
-                "url_template": ..., "signing_secret": ..., "link_ttl_minutes": ...}
+      "tools_enabled": true,
+      "tools": [{"name": ..., "kind": "http" | "vector_search", ...}],
+      "sources": [{"name": ..., ...}]
     }
 
 All keys are optional and deep-merged over the static settings. Secrets live
@@ -31,7 +30,7 @@ logger = get_logger(__name__)
 
 RUNTIME_FILENAME = "runtime_config.json"
 
-_ALLOWED_TOP_LEVEL_KEYS = {"commerce_enabled", "products", "order", "sources"}
+_ALLOWED_TOP_LEVEL_KEYS = {"tools_enabled", "tools", "sources"}
 
 # mtime-keyed in-process cache: {str(path): (mtime_ns, data)}
 _CACHE: dict[str, tuple[int, dict]] = {}
@@ -97,51 +96,6 @@ def _deep_merge_dicts(base: dict, override: dict) -> dict:
     return result
 
 
-def effective_settings(settings):
-    """Return ``(settings_copy, commerce_enabled)`` with runtime overrides applied."""
-    overrides = load_runtime_config(settings)
-    commerce_enabled = overrides.get("commerce_enabled", True)
-    if not isinstance(commerce_enabled, bool):
-        commerce_enabled = True
-    merged = settings.model_copy(deep=True)
-    products_patch = overrides.get("products") or {}
-    if products_patch:
-        merged.products = type(merged.products)(
-            **{**merged.products.model_dump(), **products_patch}
-        )
-    order_patch = overrides.get("order") or {}
-    if order_patch:
-        merged.order = type(merged.order)(
-            **{**merged.order.model_dump(), **order_patch}
-        )
-    return merged, commerce_enabled
-
-
-def masked_commerce_view(settings) -> dict:
-    """Public (secret-masked) view of the effective commerce configuration."""
-    effective, commerce_enabled = effective_settings(settings)
-    return {
-        "commerce_enabled": commerce_enabled,
-        "products": {
-            "collection": effective.products.collection,
-            "top_k": effective.products.top_k,
-            "api_base": effective.products.api_base or "",
-            "api_key_configured": bool(effective.products.api_key),
-        },
-        "order": {
-            "api_base": effective.order.api_base or "",
-            "api_key_configured": bool(effective.order.api_key),
-            "create_path": effective.order.create_path,
-            "url_template": effective.order.url_template or "",
-            "signing_secret_configured": bool(effective.order.signing_secret),
-            "link_ttl_minutes": effective.order.link_ttl_minutes,
-            "mode": "api"
-            if effective.order.api_base
-            else ("template" if effective.order.url_template else "unconfigured"),
-        },
-    }
-
-
 def get_sources(settings) -> list[dict]:
     """Raw stored source definitions (including secrets — mask before responding)."""
     sources = load_runtime_config(settings).get("sources", [])
@@ -157,6 +111,48 @@ def masked_sources_view(settings) -> list[dict]:
         masked.pop("auth_token", None)
         view.append(masked)
     return view
+
+
+def get_dynamic_tools(settings) -> list[dict]:
+    tools = load_runtime_config(settings).get("tools", [])
+    return [dict(tool) for tool in tools] if isinstance(tools, list) else []
+
+
+def masked_dynamic_tools_view(settings) -> list[dict]:
+    """Return tool definitions without exposing credential values."""
+    view = []
+    for definition in get_dynamic_tools(settings):
+        item = dict(definition)
+        headers = item.get("headers")
+        if isinstance(headers, dict):
+            item["headers_configured"] = {
+                key: bool(value) for key, value in headers.items()
+            }
+            item["headers"] = {
+                key: "" for key in headers
+            }
+        view.append(item)
+    return view
+
+
+def save_dynamic_tools(settings, definitions: list[dict]) -> list[dict]:
+    """Replace dynamic tools; blank header values keep existing credentials."""
+    existing = {tool.get("name"): tool for tool in get_dynamic_tools(settings)}
+    merged = []
+    for raw in definitions:
+        item = dict(raw)
+        name = item.get("name")
+        if not name:
+            raise ValueError("Each tool must have a name")
+        old_headers = (existing.get(name) or {}).get("headers", {})
+        headers = item.get("headers") or {}
+        item["headers"] = {
+            key: value if value else old_headers.get(key, "")
+            for key, value in headers.items()
+        }
+        merged.append(item)
+    save_runtime_config(settings, {"tools": merged})
+    return merged
 
 
 def save_sources(settings, sources: list[dict]) -> list[dict]:

@@ -78,24 +78,4 @@ admin:
   port: 8501
   password: null
 
-# Product catalog lookup: knowledge-base collection first, external API fallback.
-# Secrets (api_key) should come from env: COMPACT_RAG_PRODUCTS__API_KEY
-products:
-  collection: "products"
-  top_k: 5
-  api_base: null
-  api_key: null
-  timeout: 15
-
-# Order-link generation. api_base mode takes precedence when set;
-# otherwise url_template + signing_secret (HMAC-SHA256) mode is used.
-# Secrets only via env: COMPACT_RAG_ORDER__API_KEY / COMPACT_RAG_ORDER__SIGNING_SECRET
-order:
-  api_base: null
-  api_key: null
-  create_path: "/orders/link"
-  url_template: ""
-  signing_secret: null
-  link_ttl_minutes: 30
-
 log_level: "INFO"

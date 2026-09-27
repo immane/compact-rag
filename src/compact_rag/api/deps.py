@@ -108,31 +108,26 @@ def get_rag_pipeline():
         prompt_manager=get_prompt_manager(),
         conversation_repo=ConversationRepository(),
         message_repo=MessageRepository(),
-        tool_engine=get_commerce_tool_engine(),
+        tool_engine=get_tool_engine(),
     )
 
 
-def get_commerce_tool_engine(settings: Settings | None = None):
-    """Get the ToolEngine with product/order tools (lazy import).
-
-    Tools are lightweight closures bound to settings; the heavy retriever is
-    resolved lazily inside the tool call, so building the engine per request
-    is cheap. Returns None when commerce tools are disabled via runtime
-    config, in which case the RAG pipeline skips tool calling entirely.
-    """
-    from compact_rag.tool.commerce import build_commerce_tools
+def get_tool_engine(settings: Settings | None = None):
+    """Get the runtime-defined ToolEngine; no tool names are built in."""
     from compact_rag.tool.engine import ToolEngine
 
     resolved = settings or _cached_settings()
-    from compact_rag.config.runtime import effective_settings
+    from compact_rag.config.runtime import get_dynamic_tools, load_runtime_config
 
-    effective, commerce_enabled = effective_settings(resolved)
-    if not commerce_enabled:
+    runtime = load_runtime_config(resolved)
+    enabled = runtime.get("tools_enabled", True)
+    if not enabled:
         return None
-    return ToolEngine(
-        build_commerce_tools(effective.products, effective.order),
-        max_retries=2,
-    )
+    from compact_rag.tool.dynamic import build_dynamic_tools
+
+    definitions = get_dynamic_tools(resolved)
+    tools = build_dynamic_tools(definitions)
+    return ToolEngine(tools, max_retries=2) if tools else None
 
 
 async def verify_api_key(

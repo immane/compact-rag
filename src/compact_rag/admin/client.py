@@ -219,7 +219,7 @@ class AdminAPIClient:
     ):
         """Yield content chunks from SSE streaming response.
 
-        The final SSE chunk carries ``citations`` and ``order_links`` in its
+        The final SSE chunk carries ``citations`` and ``tool_links`` in its
         delta; when ``collector`` is given they are stored there under the
         same keys for the caller to render after the stream completes.
         """
@@ -252,36 +252,20 @@ class AdminAPIClient:
                         if collector is not None:
                             if "citations" in delta:
                                 collector["citations"] = delta["citations"] or []
-                            if "order_links" in delta:
-                                collector["order_links"] = delta["order_links"] or []
+                            if "tool_links" in delta:
+                                collector["tool_links"] = delta["tool_links"] or []
                     except json.JSONDecodeError:
                         continue
 
-    # ── Commerce / Tools config ─────────────────────────────
+    # ── Runtime tools config ────────────────────────────────
+    def get_tools_config(self) -> dict:
+        return self._get("/v1/config/tools")
 
-    def get_commerce_config(self) -> dict:
-        return self._get("/v1/config/commerce")
+    def save_tools_config(self, enabled: bool, tools: list[dict]) -> dict:
+        return self._put("/v1/config/tools", json={"enabled": enabled, "tools": tools})
 
-    def update_commerce_config(self, patch: dict) -> dict:
-        return self._put("/v1/config/commerce", json=patch)
-
-    def test_product_lookup(self, disease: str, top_k: int = 5) -> dict:
-        return self._post(
-            "/v1/config/commerce/test-lookup",
-            json={"disease": disease, "top_k": top_k},
-        )
-
-    def test_order_link(
-        self, product_id: str, quantity: int = 1, product_name: str = ""
-    ) -> dict:
-        return self._post(
-            "/v1/config/commerce/test-order-link",
-            json={
-                "product_id": product_id,
-                "quantity": quantity,
-                "product_name": product_name,
-            },
-        )
+    def test_dynamic_tool(self, name: str, arguments: dict) -> dict:
+        return self._post(f"/v1/config/tools/{name}/test", json=arguments)
 
     def get_sources(self) -> dict:
         return self._get("/v1/config/sources")
