@@ -108,6 +108,24 @@ def get_rag_pipeline():
         prompt_manager=get_prompt_manager(),
         conversation_repo=ConversationRepository(),
         message_repo=MessageRepository(),
+        tool_engine=get_commerce_tool_engine(),
+    )
+
+
+def get_commerce_tool_engine():
+    """Get the ToolEngine with product/order tools (lazy import).
+
+    Tools are lightweight closures bound to settings; the heavy retriever is
+    resolved lazily inside the tool call, so building the engine per request
+    is cheap.
+    """
+    from compact_rag.tool.commerce import build_commerce_tools
+    from compact_rag.tool.engine import ToolEngine
+
+    settings = _cached_settings()
+    return ToolEngine(
+        build_commerce_tools(settings.products, settings.order),
+        max_retries=2,
     )
 
 

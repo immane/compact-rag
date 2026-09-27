@@ -13,9 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from compact_rag.api.deps import get_db_session, get_rag_pipeline
 from compact_rag.api.schemas import (
     ChatChoice,
+    ChatCitation,
     ChatCompletionRequest,
     ChatCompletionResponse,
     ChatMessageResponse,
+    ChatOrderLink,
     UsageInfo,
 )
 from compact_rag.common.logger import get_logger
@@ -97,15 +99,26 @@ async def chat_completions(
                     role="assistant",
                     content=response.answer,
                     citations=[
-                        {
-                            "doc_id": c.doc_id,
-                            "filename": c.filename,
-                            "page_number": c.page_number,
-                            "chunk_index": c.chunk_index,
-                            "score": c.score,
-                            "content_snippet": c.content_snippet,
-                        }
+                        ChatCitation(
+                            doc_id=c.doc_id,
+                            filename=c.filename,
+                            page_number=c.page_number,
+                            chunk_index=c.chunk_index,
+                            score=c.score,
+                            content_snippet=c.content_snippet,
+                        )
                         for c in response.citations
+                    ],
+                    order_links=[
+                        ChatOrderLink(
+                            product_id=link.product_id,
+                            product_name=link.product_name,
+                            quantity=link.quantity,
+                            url=link.url,
+                            expires_at=link.expires_at,
+                            source=link.source,
+                        )
+                        for link in response.order_links
                     ],
                 ),
                 finish_reason="stop",
@@ -133,7 +146,7 @@ async def _stream_response(
         ):
             yield f"data: {json.dumps({'id': call_id, 'object': 'chat.completion.chunk', 'created': int(time.time()), 'model': request.model, 'choices': [{'index': 0, 'delta': {'content': chunk}, 'finish_reason': None}]})}\n\n"
 
-        # Send finish with citations
+        # Send finish with citations and order links
         citations = getattr(pipeline, "_last_stream_citations", [])
         citation_dicts = [
             {
@@ -146,7 +159,19 @@ async def _stream_response(
             }
             for c in citations
         ]
-        yield f"data: {json.dumps({'id': call_id, 'object': 'chat.completion.chunk', 'created': int(time.time()), 'model': request.model, 'choices': [{'index': 0, 'delta': {'citations': citation_dicts}, 'finish_reason': 'stop'}]})}\n\n"
+        order_links = getattr(pipeline, "_last_stream_order_links", [])
+        order_link_dicts = [
+            {
+                "product_id": link.product_id,
+                "product_name": link.product_name,
+                "quantity": link.quantity,
+                "url": link.url,
+                "expires_at": link.expires_at,
+                "source": link.source,
+            }
+            for link in order_links
+        ]
+        yield f"data: {json.dumps({'id': call_id, 'object': 'chat.completion.chunk', 'created': int(time.time()), 'model': request.model, 'choices': [{'index': 0, 'delta': {'citations': citation_dicts, 'order_links': order_link_dicts}, 'finish_reason': 'stop'}]})}\n\n"
         yield "data: [DONE]\n\n"
 
         await session.commit()

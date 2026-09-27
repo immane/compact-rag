@@ -203,8 +203,14 @@ class AdminAPIClient:
         temperature: float = 0.1,
         use_rerank: bool = True,
         use_hybrid: bool = True,
+        collector: dict | None = None,
     ):
-        """Yield content chunks from SSE streaming response."""
+        """Yield content chunks from SSE streaming response.
+
+        The final SSE chunk carries ``citations`` and ``order_links`` in its
+        delta; when ``collector`` is given they are stored there under the
+        same keys for the caller to render after the stream completes.
+        """
         with self.session.post(
             f"{self.base_url}/v1/chat/completions",
             json={
@@ -231,6 +237,11 @@ class AdminAPIClient:
                         delta = chunk.get("choices", [{}])[0].get("delta", {})
                         if "content" in delta and delta["content"]:
                             yield delta["content"]
+                        if collector is not None:
+                            if "citations" in delta:
+                                collector["citations"] = delta["citations"] or []
+                            if "order_links" in delta:
+                                collector["order_links"] = delta["order_links"] or []
                     except json.JSONDecodeError:
                         continue
 

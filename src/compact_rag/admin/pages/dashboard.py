@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from html import escape
+
 import streamlit as st
 
 from compact_rag.admin.client import AdminAPIClient
@@ -9,7 +11,12 @@ from compact_rag.admin.components.status import render_status_badge
 
 
 def render(client: AdminAPIClient) -> None:
+    st.markdown('<div class="rag-eyebrow">Workspace / Overview</div>', unsafe_allow_html=True)
     st.title("📊 Dashboard")
+    st.markdown(
+        '<p class="rag-subtitle">Monitor your knowledge base and service health at a glance.</p>',
+        unsafe_allow_html=True,
+    )
 
     try:
         health_data = client.health()
@@ -56,7 +63,13 @@ def render(client: AdminAPIClient) -> None:
     except Exception:
         recent_jobs = []
 
-    col1, col2, col3, col4 = st.columns(4)
+    try:
+        storage_info = client.list_storage_files()
+        storage_count = len(storage_info.get("data", []))
+    except Exception:
+        storage_count = "?"
+
+    col1, col2, col3, col4 = st.columns(4, gap="medium")
     with col1:
         st.metric("📄 Documents", doc_count)
     with col2:
@@ -64,67 +77,75 @@ def render(client: AdminAPIClient) -> None:
     with col3:
         st.metric("💬 Conversations", conv_count)
     with col4:
-        try:
-            storage_info = client.list_storage_files()
-            st.metric("💾 Storage Files", len(storage_info.get("data", [])))
-        except Exception:
-            st.metric("💾 Storage Files", "?")
+        st.metric("💾 Storage Files", storage_count)
 
-    st.markdown("---")
+    st.write("")
 
-    st.subheader("🔌 Service Health")
-    health_cols = st.columns(4)
-    components = ["api", "database", "chromadb", "storage"]
-    labels = ["API", "Database", "ChromaDB", "Storage"]
-    for i, (comp, label) in enumerate(zip(components, labels)):
-        status_val = health_data.get(comp, "unknown")
-        with health_cols[i]:
-            st.markdown(f"**{label}**")
-            st.markdown(render_status_badge(status_val), unsafe_allow_html=True)
+    with st.container(border=True):
+        st.subheader("🔌 Service Health")
+        st.markdown(
+            '<p class="rag-section-note">Live status of the services powering retrieval and storage.</p>',
+            unsafe_allow_html=True,
+        )
+        health_cols = st.columns(4)
+        components = ["api", "database", "chromadb", "storage"]
+        labels = ["API", "Database", "ChromaDB", "Storage"]
+        for i, (comp, label) in enumerate(zip(components, labels)):
+            status_val = health_data.get(comp, "unknown")
+            with health_cols[i]:
+                st.markdown(f"**{label}**")
+                st.markdown(render_status_badge(status_val), unsafe_allow_html=True)
 
-    st.markdown("---")
+    st.write("")
 
-    col_left, col_right = st.columns([1, 1])
+    col_left, col_right = st.columns([1.3, 1], gap="medium")
 
     with col_left:
-        st.subheader("⚡ Recent Ingestion Jobs")
-        if recent_jobs:
-            import pandas as pd
+        with st.container(border=True):
+            st.subheader("⚡ Recent Ingestion Jobs")
+            st.caption("Latest document processing activity")
+            if recent_jobs:
+                import pandas as pd
 
-            rows = []
-            for j in recent_jobs[:5]:
-                total_files = j.get("total_files", 0)
-                processed_files = j.get("processed_files", 0)
-                total_chunks = j.get("total_chunks", 0)
-                if (
-                    j.get("status") == "completed"
-                    and total_files > 0
-                    and processed_files == 0
-                ):
-                    processed_files = total_files
-                if j.get("status") == "completed" and total_chunks == 0:
-                    total_chunks = "-"
-                rows.append(
-                    {
-                        "ID": j.get("id", "")[:8],
-                        "Status": j.get("status", "pending"),
-                        "Progress": f"{processed_files}/{total_files}",
-                        "Chunks": total_chunks,
-                    }
-                )
-            df = pd.DataFrame(rows)
-            st.dataframe(df, use_container_width=True, hide_index=True)
-        else:
-            st.info("No ingestion jobs yet")
+                rows = []
+                for j in recent_jobs[:5]:
+                    total_files = j.get("total_files", 0)
+                    processed_files = j.get("processed_files", 0)
+                    total_chunks = j.get("total_chunks", 0)
+                    if (
+                        j.get("status") == "completed"
+                        and total_files > 0
+                        and processed_files == 0
+                    ):
+                        processed_files = total_files
+                    if j.get("status") == "completed" and total_chunks == 0:
+                        total_chunks = "-"
+                    rows.append(
+                        {
+                            "ID": j.get("id", "")[:8],
+                            "Status": j.get("status", "pending"),
+                            "Progress": f"{processed_files}/{total_files}",
+                            "Chunks": total_chunks,
+                        }
+                    )
+                st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+            else:
+                st.info("No ingestion jobs yet. Upload a document to get started.")
 
     with col_right:
-        st.subheader("⚙️ System Config")
-        config_items = {
-            "Version": info_data.get("version", "?"),
-            "LLM Provider": info_data.get("llm_provider", "?"),
-            "LLM Model": info_data.get("llm_model", "?"),
-            "Storage": info_data.get("storage_backend", "?"),
-            "Embedding": info_data.get("embedding_model", "?"),
-        }
-        for key, val in config_items.items():
-            st.text(f"{key}: {val}")
+        with st.container(border=True):
+            st.subheader("⚙️ System Config")
+            st.caption("Active runtime configuration")
+            config_items = {
+                "Version": info_data.get("version", "?"),
+                "LLM Provider": info_data.get("llm_provider", "?"),
+                "LLM Model": info_data.get("llm_model", "?"),
+                "Storage": info_data.get("storage_backend", "?"),
+                "Embedding": info_data.get("embedding_model", "?"),
+            }
+            for key, val in config_items.items():
+                st.markdown(
+                    f'<div class="rag-config-row"><span>{escape(key)}</span>'
+                    f'<strong>{escape(str(val))}</strong></div>',
+                    unsafe_allow_html=True,
+                )

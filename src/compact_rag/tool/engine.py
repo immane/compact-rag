@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 
 from compact_rag.common.exceptions import ToolExecutionError
@@ -49,7 +50,17 @@ class ToolEngine:
         last_error = None
         for attempt in range(self.max_retries + 1):
             try:
-                result = tool.execute(**kwargs)
+                if inspect.iscoroutinefunction(tool.fn):
+                    raw = await tool.fn(**kwargs)
+                    if isinstance(raw, str):
+                        result = raw
+                    else:
+                        try:
+                            result = json.dumps(raw, ensure_ascii=False, default=str)
+                        except TypeError:
+                            result = str(raw)
+                else:
+                    result = tool.execute(**kwargs)
                 return {
                     "role": "tool",
                     "name": name,

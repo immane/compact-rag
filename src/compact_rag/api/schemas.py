@@ -57,10 +57,20 @@ class ChatCitation(BaseModel):
     content_snippet: str = ""
 
 
+class ChatOrderLink(BaseModel):
+    product_id: str = ""
+    product_name: str = ""
+    quantity: int = 1
+    url: str = ""
+    expires_at: str | None = None
+    source: str = ""
+
+
 class ChatMessageResponse(BaseModel):
     role: str = "assistant"
     content: str = ""
     citations: list[ChatCitation] = Field(default_factory=list)
+    order_links: list[ChatOrderLink] = Field(default_factory=list)
 
 
 class ChatChoice(BaseModel):

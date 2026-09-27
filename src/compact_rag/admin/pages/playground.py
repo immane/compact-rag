@@ -7,6 +7,20 @@ import streamlit as st
 from compact_rag.admin.client import AdminAPIClient
 
 
+def _render_order_links(order_links: list[dict]) -> None:
+    if not order_links:
+        return
+    with st.expander("🛒 下单链接"):
+        for link in order_links:
+            name = link.get("product_name") or link.get("product_id", "?")
+            url = link.get("url", "")
+            st.markdown(f"**{name}** × {link.get('quantity', 1)}")
+            if url:
+                st.link_button(f"下单：{name}", url)
+            if link.get("expires_at"):
+                st.caption(f"有效期至 {link['expires_at']}")
+
+
 def render(client: AdminAPIClient) -> None:
     st.title("🎮 Playground")
 
@@ -49,6 +63,7 @@ def render(client: AdminAPIClient) -> None:
                             f"(p.{cite.get('page_number', '?')}, score: {cite.get('score', 0):.3f})"
                         )
                         st.caption(f"_{snippet[:200]}_")
+            _render_order_links(msg.get("order_links", []))
 
     prompt = st.chat_input("Ask a question about your documents...")
     if prompt:
@@ -65,6 +80,7 @@ def render(client: AdminAPIClient) -> None:
             if use_stream:
                 placeholder = st.empty()
                 full_content = ""
+                collector: dict = {}
                 try:
                     with st.spinner("Thinking..."):
                         chunk_iter = client.chat_stream(
@@ -74,6 +90,7 @@ def render(client: AdminAPIClient) -> None:
                             temperature=temperature,
                             use_rerank=use_rerank,
                             use_hybrid=use_hybrid,
+                            collector=collector,
                         )
                         first_chunk = next(chunk_iter, "")
                     full_content = first_chunk
@@ -83,11 +100,13 @@ def render(client: AdminAPIClient) -> None:
                         placeholder.markdown(full_content + "▌")
                     placeholder.markdown(full_content)
                     content = full_content
-                    citations = []
+                    citations = collector.get("citations", [])
+                    order_links = collector.get("order_links", [])
                 except Exception as e:
                     content = f"Error: {e}"
                     st.error(content)
                     citations = []
+                    order_links = []
             else:
                 with st.spinner("Thinking..."):
                     try:
@@ -110,10 +129,16 @@ def render(client: AdminAPIClient) -> None:
                             .get("message", {})
                             .get("citations", [])
                         )
+                        order_links = (
+                            response.get("choices", [{}])[0]
+                            .get("message", {})
+                            .get("order_links", [])
+                        )
                     except Exception as e:
                         content = f"Error: {e}"
                         st.error(content)
                         citations = []
+                        order_links = []
 
             if citations:
                 with st.expander("📎 Sources"):
@@ -124,11 +149,13 @@ def render(client: AdminAPIClient) -> None:
                             f"(p.{cite.get('page_number', '?')}, score: {cite.get('score', 0):.3f})"
                         )
                         st.caption(f"_{snippet[:200]}_")
+            _render_order_links(order_links)
 
         st.session_state.chat_messages.append(
             {
                 "role": "assistant",
                 "content": content,
                 "citations": citations,
+                "order_links": order_links,
             }
         )

@@ -113,6 +113,35 @@ class StorageSettings(BaseModel):
     s3: S3StorageSettings = Field(default_factory=S3StorageSettings)
 
 
+class ProductLookupSettings(BaseModel):
+    """Product catalog lookup — knowledge-base collection first, external API as fallback."""
+
+    collection: str = "products"
+    top_k: int = Field(default=5, ge=1, le=50)
+    api_base: str | None = None
+    api_key: str | None = None
+    timeout: int = Field(default=15, gt=0)
+
+
+class OrderLinkSettings(BaseModel):
+    """Order-link generation.
+
+    Two modes (api_base takes precedence when set):
+    1. Order-service mode — POST {api_base}{create_path} and read the ``url``
+       field from the JSON response.
+    2. Template mode — format ``url_template`` with {product_id}, {quantity},
+       {expires} and {signature}, where signature is HMAC-SHA256 of
+       ``"{product_id}:{quantity}:{expires}"`` keyed by ``signing_secret``.
+    """
+
+    api_base: str | None = None
+    api_key: str | None = None
+    create_path: str = "/orders/link"
+    url_template: str = ""
+    signing_secret: str | None = None
+    link_ttl_minutes: int = Field(default=30, gt=0)
+
+
 class AdminSettings(BaseModel):
     host: str = "127.0.0.1"
     port: int = 8501
@@ -153,6 +182,8 @@ class Settings(BaseSettings):
     llm: LLMSettings = Field(default_factory=LLMSettings)
     ingestion: IngestionSettings = Field(default_factory=IngestionSettings)
     storage: StorageSettings = Field(default_factory=StorageSettings)
+    products: ProductLookupSettings = Field(default_factory=ProductLookupSettings)
+    order: OrderLinkSettings = Field(default_factory=OrderLinkSettings)
     admin: AdminSettings = Field(default_factory=AdminSettings)
     log_level: str = "INFO"
 
@@ -215,7 +246,10 @@ class Settings(BaseSettings):
         elif config_path != "config/default.yaml":
             raise ConfigurationError(f"Config file not found: {config_path}")
 
-        # Environment variables handled automatically by pydantic-settings
+        # Environment variables handled automatically by pydantic-settings.
+        # Drop YAML keys shadowed by COMPACT_RAG_* env vars first: init kwargs
+        # would otherwise take precedence over the environment.
+        _drop_env_shadowed_keys(merged)
         settings = cls(**merged)
 
         # Fix relative paths to be absolute from project root
@@ -270,6 +304,27 @@ def _deep_merge(base: dict, override: dict) -> None:
             _deep_merge(base[key], value)
         else:
             base[key] = value
+
+
+def _drop_env_shadowed_keys(merged: dict, _prefix: str = "COMPACT_RAG_") -> None:
+    """Drop YAML values shadowed by COMPACT_RAG_* environment variables.
+
+    pydantic-settings gives init kwargs priority over env vars, but
+    :meth:`Settings.load` passes the whole merged YAML mapping as init
+    kwargs — so without this step an env override (e.g.
+    ``COMPACT_RAG_PRODUCTS__COLLECTION``) would silently lose to the YAML
+    value. Removing the shadowed keys lets env vars win, as documented.
+    """
+
+    def _walk(node: dict, parts: list[str]) -> None:
+        for key in list(node.keys()):
+            env_name = _prefix + "__".join([*parts, str(key)]).upper()
+            if env_name in os.environ:
+                node.pop(key, None)
+            elif isinstance(node[key], dict):
+                _walk(node[key], [*parts, str(key)])
+
+    _walk(merged, [])
 
 
 @lru_cache()

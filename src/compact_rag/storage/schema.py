@@ -51,12 +51,24 @@ class RAGCitation(BaseModel):
     content_snippet: str = ""
 
 
+class OrderLink(BaseModel):
+    """A generated purchase link for a product matched during a query."""
+
+    product_id: str = ""
+    product_name: str = ""
+    quantity: int = 1
+    url: str = ""
+    expires_at: str | None = None
+    source: str = ""  # order_api | template
+
+
 class RAGResponse(BaseModel):
     """Complete RAG query response."""
 
     id: str
     answer: str
     citations: list[RAGCitation] = Field(default_factory=list)
+    order_links: list[OrderLink] = Field(default_factory=list)
     token_usage: dict = Field(default_factory=dict)
     retrieval_latency_ms: float = 0.0
     generation_latency_ms: float = 0.0

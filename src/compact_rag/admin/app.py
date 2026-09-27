@@ -6,6 +6,7 @@ import streamlit as st
 
 from compact_rag.admin.client import AdminAPIClient
 from compact_rag.admin.config import get_api_base_url, is_auth_required, verify_password
+from compact_rag.admin.components.theme import apply_theme
 
 
 def get_version() -> str:
@@ -20,6 +21,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+apply_theme()
 
 # ── Authentication ───────────────────────────────────────────
 
@@ -80,24 +82,30 @@ def _check_api_health() -> tuple[bool, str]:
         return False, str(e)
 
 
-st.sidebar.title("🔍 Compact-RAG Admin")
-
-url_input = st.sidebar.text_input(
-    "API Base URL",
-    value=st.session_state.api_base_url,
-    key="api_url_input",
+st.sidebar.markdown(
+    '<div class="rag-brand">◈ Compact<span>RAG</span><br>'
+    '<small style="font-size:.7rem;font-weight:500;letter-spacing:.12em;'
+    'color:#a8bbd8">ADMIN CONSOLE</small></div>',
+    unsafe_allow_html=True,
 )
-if url_input != st.session_state.api_base_url:
-    st.session_state.api_base_url = url_input
-    st.session_state.client = AdminAPIClient(base_url=url_input)
-    st.rerun()
 
-if st.sidebar.button("🔌 Test Connection", use_container_width=True):
-    ok, msg = _check_api_health()
-    if ok:
-        st.sidebar.success(msg)
-    else:
-        st.sidebar.error(f"Connection failed: {msg}")
+with st.sidebar.expander("⚙️ Connection settings"):
+    url_input = st.text_input(
+        "API Base URL",
+        value=st.session_state.api_base_url,
+        key="api_url_input",
+    )
+    if url_input != st.session_state.api_base_url:
+        st.session_state.api_base_url = url_input
+        st.session_state.client = AdminAPIClient(base_url=url_input)
+        st.rerun()
+
+    if st.button("🔌 Test Connection", use_container_width=True):
+        ok, msg = _check_api_health()
+        if ok:
+            st.success(msg)
+        else:
+            st.error(f"Connection failed: {msg}")
 
 PAGES = {
     "📊 Dashboard": "dashboard",
@@ -110,11 +118,14 @@ PAGES = {
     "💾 Storage": "storage",
 }
 
-page_choice = st.sidebar.radio("Navigation", list(PAGES.keys()), key="nav")
+st.sidebar.caption("WORKSPACE")
+page_choice = st.sidebar.radio(
+    "Navigation", list(PAGES.keys()), key="nav", label_visibility="collapsed"
+)
 page_module = PAGES[page_choice]
 
 st.sidebar.divider()
-st.sidebar.caption(f"Version: {get_version()}")
+st.sidebar.caption(f"CompactRAG · v{get_version()}")
 
 client = st.session_state.client
 

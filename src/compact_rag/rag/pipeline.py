@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import time
 from typing import Any, AsyncGenerator
 
@@ -9,9 +10,40 @@ from compact_rag.common.logger import get_logger
 from compact_rag.generation.llm import LLMClient
 from compact_rag.generation.prompt import PromptManager
 from compact_rag.retrieval.retriever import HybridRetriever
-from compact_rag.storage.schema import RAGCitation, RAGResponse
+from compact_rag.storage.schema import OrderLink, RAGCitation, RAGResponse
+from compact_rag.tool.commerce import ORDER_TOOL_NAME
 
 logger = get_logger(__name__)
+
+
+def extract_order_links(messages: list[dict]) -> list[OrderLink]:
+    """Collect order links from ``create_order_link`` tool result messages."""
+    links: list[OrderLink] = []
+    for msg in messages:
+        if msg.get("role") != "tool" or msg.get("name") != ORDER_TOOL_NAME:
+            continue
+        content = msg.get("content", "")
+        try:
+            payload = json.loads(content) if isinstance(content, str) else content
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if not isinstance(payload, dict) or not payload.get("url"):
+            continue
+        try:
+            quantity = int(payload.get("quantity", 1) or 1)
+        except (TypeError, ValueError):
+            quantity = 1
+        links.append(
+            OrderLink(
+                product_id=str(payload.get("product_id", "")),
+                product_name=str(payload.get("product_name", "")),
+                quantity=max(1, quantity),
+                url=str(payload["url"]),
+                expires_at=payload.get("expires_at"),
+                source=str(payload.get("source", "")),
+            )
+        )
+    return links
 
 
 class RAGPipeline:
@@ -62,6 +94,8 @@ class RAGPipeline:
             except Exception as e:
                 logger.warning("Tool execution failed", error=str(e))
 
+        order_links = extract_order_links(messages) if self.tool_engine else []
+
         t_ret_start = time.perf_counter()
         retrieved = await self.retriever.retrieve(
             query=question,
@@ -111,6 +145,7 @@ class RAGPipeline:
                     citations,
                     token_usage,
                     retrieval_latency + generation_latency,
+                    order_links,
                 )
             except Exception as e:
                 logger.warning("Failed to save conversation", error=str(e))
@@ -119,6 +154,7 @@ class RAGPipeline:
             id=f"rag-{int(t_start * 1000)}",
             answer=answer,
             citations=citations,
+            order_links=order_links,
             token_usage=token_usage,
             retrieval_latency_ms=retrieval_latency,
             generation_latency_ms=generation_latency,
@@ -151,6 +187,10 @@ class RAGPipeline:
                     messages.append({"role": "assistant", "content": result})
             except Exception as e:
                 logger.warning("Tool execution failed", error=str(e))
+
+        self._last_stream_order_links = (
+            extract_order_links(messages) if self.tool_engine else []
+        )
 
         t_ret_start = time.perf_counter()
         retrieved = await self.retriever.retrieve(
@@ -189,6 +229,7 @@ class RAGPipeline:
                     citations,
                     {"completion_tokens": len(full_answer.split())},
                     retrieval_latency + generation_latency,
+                    self._last_stream_order_links,
                 )
             except Exception as e:
                 logger.warning("Failed to save conversation", error=str(e))
@@ -281,6 +322,7 @@ class RAGPipeline:
         citations: list[RAGCitation],
         token_usage: dict,
         latency_ms: float,
+        order_links: list[OrderLink] | None = None,
     ) -> None:
         sources = [
             {
@@ -293,6 +335,13 @@ class RAGPipeline:
             }
             for c in citations
         ]
+        # Audit trail for generated purchase links (stored in the tool_calls
+        # column; never rendered as citations in the admin UI).
+        tool_calls = (
+            {"order_links": [link.model_dump() for link in order_links]}
+            if order_links
+            else None
+        )
         try:
             await self.message_repo.create(
                 db_session,
@@ -306,6 +355,7 @@ class RAGPipeline:
                 role="assistant",
                 content=answer,
                 sources=sources,
+                tool_calls=tool_calls,
                 token_count=token_usage.get("total_tokens", 0),
                 latency_ms=int(latency_ms),
             )
