@@ -1,11 +1,11 @@
-"""Ingestion job monitoring endpoints."""
+"""Ingestion job monitoring and source-sync endpoints."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from compact_rag.api.deps import get_db_session, verify_api_key
+from compact_rag.api.deps import get_db_session, get_settings, verify_api_key
 from compact_rag.api.schemas import (
     IngestionJobResponse,
     PaginatedResponse,
@@ -13,6 +13,7 @@ from compact_rag.api.schemas import (
 )
 from compact_rag.common.exceptions import FileNotFoundError
 from compact_rag.common.logger import get_logger
+from compact_rag.config.settings import Settings
 
 logger = get_logger(__name__)
 router = APIRouter(tags=["Ingestion"])
@@ -88,3 +89,24 @@ async def get_ingestion_job(
         completed_at=str(job.completed_at) if job.completed_at else None,
         created_at=str(job.created_at) if job.created_at else None,
     )
+
+
+@router.post("/ingestion/sources/sync")
+async def sync_sources_endpoint(
+    source: str | None = Query(None, description="Sync a single source by name"),
+    settings: Settings = Depends(get_settings),
+    session: AsyncSession = Depends(get_db_session),
+    _api_key: str | None = Depends(verify_api_key),
+):
+    """Sync enabled API data sources into their collections.
+
+    Designed to be triggered daily by an external cron, e.g.:
+    ``curl -X POST http://127.0.0.1:8001/v1/ingestion/sources/sync``.
+    """
+    from compact_rag.ingestion.sync import sync_sources
+
+    try:
+        summaries = await sync_sources(settings, session, only=source)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return {"sources": summaries}

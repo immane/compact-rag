@@ -156,6 +156,10 @@ def render(client: AdminAPIClient) -> None:
 
     st.write("")
 
+    _render_sources(client)
+
+    st.write("")
+
     with st.container(border=True):
         st.subheader("🧪 Dry Run")
         st.caption("Test lookup and link generation without going through chat.")
@@ -163,11 +167,11 @@ def render(client: AdminAPIClient) -> None:
         with t_col1:
             disease = st.text_input("Disease / symptom", value="", key="test_disease")
             if st.button("Test Lookup", key="test_lookup"):
-                if not disease.strip():
+                if not (disease or "").strip():
                     st.warning("Enter a disease first.")
                 else:
                     try:
-                        result = client.test_product_lookup(disease.strip())
+                        result = client.test_product_lookup((disease or "").strip())
                         items = result.get("products", [])
                         if not items:
                             st.info(result.get("error", "No products found."))
@@ -184,11 +188,11 @@ def render(client: AdminAPIClient) -> None:
             pid = st.text_input("Product ID", value="", key="test_pid")
             qty = st.number_input("Quantity", min_value=1, value=1, key="test_qty")
             if st.button("Test Order Link", key="test_order"):
-                if not pid.strip():
+                if not (pid or "").strip():
                     st.warning("Enter a product ID first.")
                 else:
                     try:
-                        result = client.test_order_link(pid.strip(), int(qty))
+                        result = client.test_order_link((pid or "").strip(), int(qty))
                         if result.get("url"):
                             st.link_button("Open order link", result["url"])
                             st.caption(f"Expires: {result.get('expires_at', '?')}")
@@ -196,3 +200,139 @@ def render(client: AdminAPIClient) -> None:
                             st.warning(result.get("error", "No URL generated."))
                     except Exception as e:
                         st.error(f"Generation failed: {e}")
+
+
+def _render_sources(client: AdminAPIClient) -> None:
+    with st.container(border=True):
+        st.subheader("🗂️ Dynamic Sources")
+        st.caption(
+            "Paginated API sources (comments, reports, …) synced into "
+            "collections. Triggered daily by an external cron calling "
+            "`POST /v1/ingestion/sources/sync`."
+        )
+        try:
+            sources = client.get_sources().get("sources", [])
+        except Exception as e:
+            st.error(f"Failed to load sources: {e}")
+            return
+
+        if not sources:
+            st.info("No sources configured yet.")
+        for s in sources:
+            name = s.get("name", "?")
+            last = s.get("last_result") or {}
+            summary = (
+                f"fetched {last.get('fetched', '?')}, "
+                f"+{last.get('completed', '?')}/={last.get('skipped', '?')}/"
+                f"x{last.get('failed', '?')}"
+                if last
+                else "never synced"
+            )
+            c1, c2, c3, c4 = st.columns([3, 2, 2, 2])
+            with c1:
+                status = "🟢" if s.get("enabled") else "⚪"
+                st.markdown(f"**{status} {name}** → `{s.get('collection', '')}`")
+                st.caption(f"Last sync: {s.get('last_sync') or '-'} · {summary}")
+            with c2:
+                if st.button("🔄 Sync", key=f"sync_{name}"):
+                    try:
+                        with st.spinner(f"Syncing {name}…"):
+                            result = client.sync_sources(source=name)
+                        st.json(result)
+                    except Exception as e:
+                        st.error(f"Sync failed: {e}")
+            with c3:
+                if st.button("🗑️ Delete", key=f"del_src_{name}"):
+                    try:
+                        client.delete_source(name)
+                        st.success(f"Deleted '{name}'")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Delete failed: {e}")
+            with c4:
+                st.caption(f"token: {'✅' if s.get('auth_token_configured') else '❌'}")
+            st.divider()
+
+        if st.button("🔄 Sync All Enabled", key="sync_all"):
+            try:
+                with st.spinner("Syncing all sources…"):
+                    result = client.sync_sources()
+                st.json(result)
+            except Exception as e:
+                st.error(f"Sync failed: {e}")
+
+        names = [s.get("name", "") for s in sources]
+        choice = st.selectbox("Edit source", ["(new source)", *names], key="src_edit")
+        current = next((s for s in sources if s.get("name") == choice), {})
+
+        def _text(key: str, default: str = "") -> str:
+            value = current.get(key, default)
+            return str(value) if value is not None else default
+
+        with st.form("source_form"):
+            f_name = st.text_input("Name (a-z, 0-9, -, _)", value=_text("name"))
+            f_collection = st.text_input("Target collection", value=_text("collection", "default"))
+            f_base = st.text_input("Base URL", value=_text("base_url"))
+            f_path = st.text_input("Path", value=_text("path", "/"))
+            f_auth_header = st.text_input("Auth header", value=_text("auth_header", "x-auth-token"))
+            f_token = st.text_input(
+                "Auth token", value="", type="password",
+                placeholder="空 = 保持不变" if current.get("auth_token_configured") else "Required",
+            )
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                f_page_param = st.text_input("Page param", value=_text("page_param", "page"))
+                f_page_size = st.number_input("Page size", min_value=1, max_value=1000,
+                                              value=int(current.get("page_size", 100) or 100))
+            with c2:
+                f_items = st.text_input("Items path", value=_text("items_path", "data"))
+                f_code = st.text_input("Code path", value=_text("code_path", "code"))
+                f_success = st.number_input("Success code", value=int(current.get("success_code", 0) or 0))
+            with c3:
+                f_paginator = st.text_input("Paginator path", value=_text("paginator_path", "paginator"))
+                f_current = st.text_input("Current-page field", value=_text("current_page_field", "current"))
+                f_last = st.text_input("Last-page field", value=_text("last_page_field", "last"))
+            f_id = st.text_input("ID field", value=_text("id_field", "id"))
+            f_updated = st.text_input("Updated-at field (empty = full sync each time)",
+                                      value=_text("updated_at_field"))
+            f_title = st.text_input("Title template", value=_text("title_template", "#{id}"))
+            body_default = current.get("body_fields", ["content"])
+            f_body = st.text_input("Body fields (comma separated)",
+                                   value=", ".join(body_default) if isinstance(body_default, list) else str(body_default or ""))
+            f_enabled = st.checkbox("Enabled", value=bool(current.get("enabled", True)))
+            submitted = st.form_submit_button("Save Source", type="primary")
+        if submitted:
+            if not (f_name or "").strip():
+                st.warning("Name is required.")
+                return
+            entry = {
+                "name": (f_name or "").strip(),
+                "collection": (f_collection or "").strip() or "default",
+                "base_url": (f_base or "").strip(),
+                "path": (f_path or "").strip() or "/",
+                "auth_header": (f_auth_header or "").strip() or "x-auth-token",
+                "auth_token": f_token or "",
+                "page_param": (f_page_param or "").strip() or "page",
+                "page_size": int(f_page_size),
+                "items_path": (f_items or "").strip() or "data",
+                "code_path": (f_code or "").strip() or "code",
+                "success_code": int(f_success),
+                "paginator_path": (f_paginator or "").strip() or "paginator",
+                "current_page_field": (f_current or "").strip() or "current",
+                "last_page_field": (f_last or "").strip() or "last",
+                "id_field": (f_id or "").strip() or "id",
+                "updated_at_field": (f_updated or "").strip() or None,
+                "title_template": (f_title or "").strip() or "#{id}",
+                "body_fields": [b.strip() for b in (f_body or "").split(",") if b.strip()] or ["content"],
+                "enabled": bool(f_enabled),
+            }
+            if choice not in ("(new source)", entry["name"]):
+                others = [s for s in sources if s.get("name") != choice]
+            else:
+                others = [s for s in sources if s.get("name") != entry["name"]]
+            try:
+                client.save_sources([*others, entry])
+                st.success(f"Saved '{entry['name']}'")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Save failed: {e}")

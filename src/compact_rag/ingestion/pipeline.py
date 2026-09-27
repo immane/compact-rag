@@ -15,6 +15,7 @@ from compact_rag.common.exceptions import (
 from compact_rag.common.logger import get_logger
 from compact_rag.ingestion.chunker import chunk_documents
 from compact_rag.ingestion.loader import LoaderFactory
+from compact_rag.ingestion.sources import record_content_hash
 from compact_rag.ingestion.table_extractor import TableExtractor
 from compact_rag.storage.schema import IngestionResult
 
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from compact_rag.config.settings import Settings
+    from compact_rag.ingestion.sources import SourceRecord
 
 logger = get_logger(__name__)
 
@@ -66,26 +68,11 @@ class IngestionPipeline:
         session = self._get_session()
 
         try:
-            from compact_rag.storage.db.repository.collection import (
-                CollectionRepository,
-            )
             from compact_rag.storage.db.repository.document import DocumentRepository
 
-            collection_repo = CollectionRepository()
             document_repo = DocumentRepository()
 
-            collection = await collection_repo.get_by_name(session, collection_name)
-            if collection is None:
-                collection = await collection_repo.create(
-                    session,
-                    name=collection_name,
-                    embedding_model=self._settings.embedding.model_name,
-                    chunk_size=self._settings.ingestion.chunk_size,
-                    chunk_overlap=self._settings.ingestion.chunk_overlap,
-                )
-                logger.info(
-                    "Created collection", name=collection_name, id=collection.id
-                )
+            collection = await self._ensure_collection(session, collection_name)
 
             existing = await document_repo.get_by_hash(
                 session, file_hash, collection.id
@@ -195,7 +182,13 @@ class IngestionPipeline:
                     )
 
             await document_repo.update(session, doc.id, status="completed")
-            await collection_repo.increment_document_count(session, collection.id, 1)
+            from compact_rag.storage.db.repository.collection import (
+                CollectionRepository as _CollectionRepository,
+            )
+
+            await _CollectionRepository().increment_document_count(
+                session, collection.id, 1
+            )
             await job_repo.update_progress(
                 session,
                 job_id,
@@ -267,6 +260,193 @@ class IngestionPipeline:
                 error_message=error_msg,
                 duration_ms=duration_ms,
             )
+
+    async def _ensure_collection(self, session, collection_name: str):
+        """Get or create a collection by name."""
+        from compact_rag.storage.db.repository.collection import CollectionRepository
+
+        collection_repo = CollectionRepository()
+        collection = await collection_repo.get_by_name(session, collection_name)
+        if collection is None:
+            collection = await collection_repo.create(
+                session,
+                name=collection_name,
+                embedding_model=self._settings.embedding.model_name,
+                chunk_size=self._settings.ingestion.chunk_size,
+                chunk_overlap=self._settings.ingestion.chunk_overlap,
+            )
+            logger.info("Created collection", name=collection_name, id=collection.id)
+        return collection
+
+    async def ingest_records(
+        self,
+        records: list[SourceRecord],
+        collection_name: str = "default",
+        source_name: str = "",
+    ) -> list[IngestionResult]:
+        """Ingest API source records as individual documents.
+
+        Deduplication is hash-based (unchanged records are ``skipped``).
+        Records whose content changed replace the previous document version:
+        the old document row, its chunks and its vectors are removed first so
+        retrieval never mixes stale and fresh text.
+        """
+        from compact_rag.ingestion.loader import LoadedPage
+        from compact_rag.storage.db.repository.chunk import ChunkRepository
+        from compact_rag.storage.db.repository.collection import CollectionRepository
+        from compact_rag.storage.db.repository.document import DocumentRepository
+        from compact_rag.storage.db.repository.ingestion import IngestionJobRepository
+
+        session = self._get_session()
+        start_time = time.perf_counter()
+        document_repo = DocumentRepository()
+        chunk_repo = ChunkRepository()
+        collection_repo = CollectionRepository()
+        job_repo = IngestionJobRepository()
+
+        collection = await self._ensure_collection(session, collection_name)
+        job = await job_repo.create_job(
+            session, collection.id, total_files=len(records)
+        )
+        await session.commit()
+
+        embedding_service = self._get_embedding_service()
+        vector_store = self._get_vector_store(embedding_service)
+
+        results: list[IngestionResult] = []
+        processed = 0
+        total_chunks = 0
+        errors: list[dict] = []
+        for record in records:
+            filename = f"{source_name}#{record.external_id}" if source_name else record.title
+            content_hash = record_content_hash(source_name, record)
+            try:
+                existing = await document_repo.get_by_hash(
+                    session, content_hash, collection.id
+                )
+                if existing:
+                    results.append(
+                        IngestionResult(
+                            doc_id=existing.id,
+                            filename=existing.filename,
+                            status="skipped",
+                            chunk_count=existing.chunk_count,
+                            table_count=existing.table_count,
+                            duration_ms=(time.perf_counter() - start_time) * 1000,
+                        )
+                    )
+                    processed += 1
+                    continue
+
+                # Replace a previous version of the same record, if any.
+                slot_docs, _ = await document_repo.list(
+                    session, filename=filename, collection_id=collection.id
+                )
+                for slot in slot_docs:
+                    try:
+                        vector_store.delete_by_document(slot.id)
+                    except Exception as e:
+                        logger.warning(
+                            "Vector cleanup failed", doc_id=slot.id, error=str(e)
+                        )
+                    await document_repo.delete(session, slot.id)
+                    await collection_repo.increment_document_count(
+                        session, collection.id, -1
+                    )
+
+                pages = [
+                    LoadedPage(
+                        page_number=1,
+                        content=record.content,
+                        metadata=dict(record.metadata),
+                    )
+                ]
+                chunks = chunk_documents(
+                    pages,
+                    chunk_size=self._settings.ingestion.chunk_size,
+                    chunk_overlap=self._settings.ingestion.chunk_overlap,
+                    strategy=self._settings.ingestion.chunking_strategy,
+                )
+                texts = [c.content for c in chunks]
+                embeddings = embedding_service.encode(texts) if texts else None
+
+                doc = await document_repo.create(
+                    session,
+                    collection_id=collection.id,
+                    filename=filename,
+                    file_type="api",
+                    file_size=len(record.content.encode("utf-8")),
+                    file_hash=content_hash,
+                    page_count=1,
+                    chunk_count=len(chunks),
+                    table_count=0,
+                    status="processing",
+                    metadata_=dict(record.metadata),
+                )
+                await session.flush()
+
+                if embeddings is not None and len(embeddings) > 0:
+                    for chunk in chunks:
+                        chunk.metadata.update(record.metadata)
+                        chunk.metadata["doc_id"] = doc.id
+                        chunk.metadata["filename"] = filename
+                        chunk.metadata["collection_name"] = collection_name
+                    chroma_ids = vector_store.add_documents(chunks, embeddings)
+                    for chunk, chroma_id in zip(chunks, chroma_ids):
+                        await chunk_repo.create(
+                            session,
+                            document_id=doc.id,
+                            chroma_id=chroma_id,
+                            chunk_index=chunk.chunk_index,
+                            page_number=chunk.page_number,
+                            is_table=chunk.is_table,
+                            token_count=chunk.token_count,
+                            content_hash=chunk.content_hash,
+                        )
+
+                await document_repo.update(session, doc.id, status="completed")
+                await collection_repo.increment_document_count(
+                    session, collection.id, 1
+                )
+                await session.commit()
+                processed += 1
+                total_chunks += len(chunks)
+                await job_repo.update_progress(
+                    session, job.id, processed=processed, chunks=total_chunks
+                )
+                await session.commit()
+                results.append(
+                    IngestionResult(
+                        doc_id=doc.id,
+                        filename=filename,
+                        status="completed",
+                        chunk_count=len(chunks),
+                        duration_ms=(time.perf_counter() - start_time) * 1000,
+                    )
+                )
+            except Exception as e:
+                await session.rollback()
+                error_msg = f"{type(e).__name__}: {e}"
+                logger.error("Record ingestion failed", filename=filename, error=error_msg)
+                errors.append({"filename": filename, "error": error_msg})
+                results.append(
+                    IngestionResult(
+                        doc_id="",
+                        filename=filename,
+                        status="failed",
+                        error_message=error_msg,
+                        duration_ms=(time.perf_counter() - start_time) * 1000,
+                    )
+                )
+
+        await job_repo.complete_job(
+            session,
+            job.id,
+            status="completed",
+            errors={"errors": errors} if errors else None,
+        )
+        await session.commit()
+        return results
 
     async def ingest_directory(
         self,

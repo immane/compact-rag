@@ -47,6 +47,18 @@ class AdminAPIClient:
         r.raise_for_status()
         return r.json()
 
+    def _put(self, path: str, **kwargs) -> dict:
+        headers = kwargs.pop("headers", {})
+        headers.setdefault("Content-Type", "application/json")
+        r = self.session.put(
+            f"{self.base_url}{path}",
+            timeout=DEFAULT_REQUEST_TIMEOUT,
+            headers=headers,
+            **kwargs,
+        )
+        r.raise_for_status()
+        return r.json()
+
     def _patch(self, path: str, **kwargs) -> dict:
         headers = kwargs.pop("headers", {})
         headers.setdefault("Content-Type", "application/json")
@@ -251,7 +263,7 @@ class AdminAPIClient:
         return self._get("/v1/config/commerce")
 
     def update_commerce_config(self, patch: dict) -> dict:
-        return self._post("/v1/config/commerce", json=patch)
+        return self._put("/v1/config/commerce", json=patch)
 
     def test_product_lookup(self, disease: str, top_k: int = 5) -> dict:
         return self._post(
@@ -270,6 +282,19 @@ class AdminAPIClient:
                 "product_name": product_name,
             },
         )
+
+    def get_sources(self) -> dict:
+        return self._get("/v1/config/sources")
+
+    def save_sources(self, sources: list) -> dict:
+        return self._put("/v1/config/sources", json={"sources": sources})
+
+    def delete_source(self, name: str) -> dict:
+        return self._delete(f"/v1/config/sources/{name}")
+
+    def sync_sources(self, source: str | None = None) -> dict:
+        params = {"source": source} if source else None
+        return self._post("/v1/ingestion/sources/sync", params=params)
 
     # ── API Keys ────────────────────────────────────────────
 

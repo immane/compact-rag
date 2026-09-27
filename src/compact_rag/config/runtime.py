@@ -31,7 +31,7 @@ logger = get_logger(__name__)
 
 RUNTIME_FILENAME = "runtime_config.json"
 
-_ALLOWED_TOP_LEVEL_KEYS = {"commerce_enabled", "products", "order"}
+_ALLOWED_TOP_LEVEL_KEYS = {"commerce_enabled", "products", "order", "sources"}
 
 # mtime-keyed in-process cache: {str(path): (mtime_ns, data)}
 _CACHE: dict[str, tuple[int, dict]] = {}
@@ -140,3 +140,45 @@ def masked_commerce_view(settings) -> dict:
             else ("template" if effective.order.url_template else "unconfigured"),
         },
     }
+
+
+def get_sources(settings) -> list[dict]:
+    """Raw stored source definitions (including secrets — mask before responding)."""
+    sources = load_runtime_config(settings).get("sources", [])
+    return [dict(s) for s in sources] if isinstance(sources, list) else []
+
+
+def masked_sources_view(settings) -> list[dict]:
+    """Source definitions with auth tokens replaced by a configured flag."""
+    view = []
+    for source in get_sources(settings):
+        masked = dict(source)
+        masked["auth_token_configured"] = bool(masked.get("auth_token"))
+        masked.pop("auth_token", None)
+        view.append(masked)
+    return view
+
+
+def save_sources(settings, sources: list[dict]) -> list[dict]:
+    """Replace the stored source list.
+
+    Entries are matched by ``name``: an empty ``auth_token`` keeps the
+    previously stored token, and server-managed ``last_sync``/``last_result``
+    are preserved unless explicitly provided.
+    """
+    stored = {s.get("name"): s for s in get_sources(settings)}
+    merged = []
+    for entry in sources:
+        name = entry.get("name")
+        if not name:
+            raise ValueError("Each source must have a name")
+        item = dict(entry)
+        previous = stored.get(name, {})
+        if not item.get("auth_token") and previous.get("auth_token"):
+            item["auth_token"] = previous["auth_token"]
+        for carried in ("last_sync", "last_result"):
+            if carried not in item and carried in previous:
+                item[carried] = previous[carried]
+        merged.append(item)
+    save_runtime_config(settings, {"sources": merged})
+    return merged
