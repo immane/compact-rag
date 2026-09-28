@@ -44,6 +44,7 @@ Thumbs.db
 htmlcov/
 .coverage
 *.coverage.*
+.playwright-mcp/
 
 # Obsidian
 .obsidian/
