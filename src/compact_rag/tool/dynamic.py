@@ -46,7 +46,9 @@ class DynamicToolDefinition(BaseModel):
     @classmethod
     def validate_name(cls, value: str) -> str:
         if not _NAME.fullmatch(value):
-            raise ValueError("name must be 1-64 letters/digits/underscores and start with a letter")
+            raise ValueError(
+                "name must be 1-64 letters/digits/underscores and start with a letter"
+            )
         return value
 
     @field_validator("kind")
@@ -95,7 +97,9 @@ def _render(value: Any, arguments: dict[str, Any]) -> Any:
     return _TEMPLATE.sub(replace, value)
 
 
-def _template_headers(headers: dict[str, str], arguments: dict[str, Any]) -> dict[str, str]:
+def _template_headers(
+    headers: dict[str, str], arguments: dict[str, Any]
+) -> dict[str, str]:
     return {key: _render(value, arguments) for key, value in headers.items()}
 
 
@@ -121,9 +125,7 @@ async def _execute_http(definition: DynamicToolDefinition, arguments: dict) -> A
             return {"text": response.text}
 
 
-def build_dynamic_tools(
-    definitions: list[dict], retriever_provider=None
-) -> list[Tool]:
+def build_dynamic_tools(definitions: list[dict], retriever_provider=None) -> list[Tool]:
     """Build runtime Tool objects from validated tool declarations."""
     tools = []
     for raw in definitions:
@@ -142,10 +144,15 @@ def build_dynamic_tools(
             retriever = provider()
             query = arguments.get(_definition.query_argument)
             if not query:
-                return {"error": f"Missing query argument '{_definition.query_argument}'."}
+                return {
+                    "error": f"Missing query argument '{_definition.query_argument}'."
+                }
             results = await retriever.retrieve(
-                query=str(query), collection=_definition.collection,
-                top_k=_definition.top_k, use_hybrid_search=True, use_rerank=True,
+                query=str(query),
+                collection=_definition.collection,
+                top_k=_definition.top_k,
+                use_hybrid_search=True,
+                use_rerank=True,
             )
             return [
                 {

@@ -318,7 +318,9 @@ class IngestionPipeline:
         total_chunks = 0
         errors: list[dict] = []
         for record in records:
-            filename = f"{source_name}#{record.external_id}" if source_name else record.title
+            filename = (
+                f"{source_name}#{record.external_id}" if source_name else record.title
+            )
             content_hash = record_content_hash(source_name, record)
             try:
                 existing = await document_repo.get_by_hash(
@@ -427,7 +429,9 @@ class IngestionPipeline:
             except Exception as e:
                 await session.rollback()
                 error_msg = f"{type(e).__name__}: {e}"
-                logger.error("Record ingestion failed", filename=filename, error=error_msg)
+                logger.error(
+                    "Record ingestion failed", filename=filename, error=error_msg
+                )
                 errors.append({"filename": filename, "error": error_msg})
                 results.append(
                     IngestionResult(

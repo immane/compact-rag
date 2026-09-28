@@ -79,15 +79,27 @@ def render(client: AdminAPIClient) -> None:
             with st.container(border=True):
                 cols = st.columns([3.4, 1, 1.4, 1.1], vertical_alignment="center")
                 with cols[0]:
-                    st.markdown(f'<div class="rag-card-title">{escape(col_name)}</div>', unsafe_allow_html=True)
+                    st.markdown(
+                        f'<div class="rag-card-title">{escape(col_name)}</div>',
+                        unsafe_allow_html=True,
+                    )
                     if col_desc:
-                        st.markdown(f'<div class="rag-card-description">{escape(col_desc)}</div>', unsafe_allow_html=True)
-                    st.markdown(f'<div class="rag-card-description">Embedding · {escape(col_embed)}</div>', unsafe_allow_html=True)
+                        st.markdown(
+                            f'<div class="rag-card-description">{escape(col_desc)}</div>',
+                            unsafe_allow_html=True,
+                        )
+                    st.markdown(
+                        f'<div class="rag-card-description">Embedding · {escape(col_embed)}</div>',
+                        unsafe_allow_html=True,
+                    )
                 with cols[1]:
                     render_compact_stat("Documents", col_docs)
                 with cols[2]:
                     if created:
-                        st.markdown(f'<div class="rag-row-meta"><span>Created</span><strong>{created[:10]}</strong></div>', unsafe_allow_html=True)
+                        st.markdown(
+                            f'<div class="rag-row-meta"><span>Created</span><strong>{created[:10]}</strong></div>',
+                            unsafe_allow_html=True,
+                        )
                 with cols[3]:
                     delete_key = f"delete_col_{col_id}"
                     if delete_key not in st.session_state:

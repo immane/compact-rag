@@ -46,7 +46,9 @@ def render(client: AdminAPIClient) -> None:
         items = data.get("data", [])
         pagination = data.get("pagination", {})
 
-        st.caption(f"{pagination.get('total', 0)} keys · Page {page} of {pagination.get('total_pages', 1) or 1}")
+        st.caption(
+            f"{pagination.get('total', 0)} keys · Page {page} of {pagination.get('total_pages', 1) or 1}"
+        )
 
         if not items:
             st.info("No API keys found")
@@ -64,9 +66,18 @@ def render(client: AdminAPIClient) -> None:
             with st.container(border=True):
                 cols = st.columns([3.1, 1, 1.5, 1.5], vertical_alignment="center")
                 with cols[0]:
-                    st.markdown(f'<div class="rag-card-title">{escape(key_name)}</div>', unsafe_allow_html=True)
-                    st.markdown(f'<div class="rag-mono">{escape(key_prefix)}</div>', unsafe_allow_html=True)
-                    st.markdown(f'<div class="rag-card-description">{escape(", ".join(permissions))}</div>', unsafe_allow_html=True)
+                    st.markdown(
+                        f'<div class="rag-card-title">{escape(key_name)}</div>',
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown(
+                        f'<div class="rag-mono">{escape(key_prefix)}</div>',
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown(
+                        f'<div class="rag-card-description">{escape(", ".join(permissions))}</div>',
+                        unsafe_allow_html=True,
+                    )
                 with cols[1]:
                     status = "active" if is_active else "inactive"
                     st.markdown(render_status_badge(status), unsafe_allow_html=True)

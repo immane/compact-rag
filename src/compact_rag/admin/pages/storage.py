@@ -65,12 +65,21 @@ def render(client: AdminAPIClient) -> None:
             content_type = f_item.get("content_type", "")
 
             with st.container(border=True):
-                cols = st.columns([3.2, 1.3, 1.1, .8], vertical_alignment="center")
+                cols = st.columns([3.2, 1.3, 1.1, 0.8], vertical_alignment="center")
                 with cols[0]:
-                    st.markdown(f'<div class="rag-card-title">{escape(filename)}</div>', unsafe_allow_html=True)
-                    st.markdown(f'<div class="rag-mono">{escape(storage_key)}</div>', unsafe_allow_html=True)
+                    st.markdown(
+                        f'<div class="rag-card-title">{escape(filename)}</div>',
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown(
+                        f'<div class="rag-mono">{escape(storage_key)}</div>',
+                        unsafe_allow_html=True,
+                    )
                 with cols[1]:
-                    st.markdown(f'<div class="rag-row-meta"><span>{escape(storage_type.title())}</span><strong>{escape(content_type or "Unknown type")}</strong><span>{file_size / 1024:.1f} KB</span></div>', unsafe_allow_html=True)
+                    st.markdown(
+                        f'<div class="rag-row-meta"><span>{escape(storage_type.title())}</span><strong>{escape(content_type or "Unknown type")}</strong><span>{file_size / 1024:.1f} KB</span></div>',
+                        unsafe_allow_html=True,
+                    )
                 with cols[2]:
                     url = client.get_file_url(storage_key)
                     st.link_button("🔗 Download", url)

@@ -47,7 +47,7 @@ lint-fix: ## Auto-fix lint issues
 ci-install: ## Install deps like GitHub Actions CI
 	python -m pip install --upgrade pip
 	pip install -e ".[dev]"
-	pip install ruff
+	pip install ruff==0.15.14
 
 ci-lint: ## Run lint exactly like GitHub Actions
 	ruff check src/compact_rag/

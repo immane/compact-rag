@@ -30,6 +30,7 @@ data/chromadb/
 data/storage/
 data/compact-rag.db
 data/documents/
+data/runtime_config.json
 
 # Logs
 *.log

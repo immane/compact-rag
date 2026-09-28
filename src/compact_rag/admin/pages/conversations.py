@@ -61,7 +61,7 @@ def _render_transcript(messages: list[dict]) -> None:
                         for src in src_data:
                             st.markdown(
                                 f'<div class="rag-row-meta"><strong>{escape(str(src.get("filename", "?")))}</strong>'
-                                f'<span>Relevance {src.get("score", 0):.3f}</span></div>',
+                                f"<span>Relevance {src.get('score', 0):.3f}</span></div>",
                                 unsafe_allow_html=True,
                             )
                     else:
@@ -95,12 +95,16 @@ def render(client: AdminAPIClient) -> None:
                     '<div class="rag-panel-heading">Conversations</div>',
                     unsafe_allow_html=True,
                 )
-                search = st.text_input(
-                    "Search conversations",
-                    placeholder="Search by title…",
-                    key="conv_search",
-                    label_visibility="collapsed",
-                ).strip().lower()
+                search = (
+                    st.text_input(
+                        "Search conversations",
+                        placeholder="Search by title…",
+                        key="conv_search",
+                        label_visibility="collapsed",
+                    )
+                    .strip()
+                    .lower()
+                )
                 visible = [
                     c for c in items if search in str(c.get("title", "")).lower()
                 ]
@@ -108,7 +112,9 @@ def render(client: AdminAPIClient) -> None:
 
                 valid_ids = {c.get("id", "") for c in items}
                 if st.session_state.conv_selected not in valid_ids:
-                    st.session_state.conv_selected = items[0].get("id", "") if items else None
+                    st.session_state.conv_selected = (
+                        items[0].get("id", "") if items else None
+                    )
 
                 with st.container(height=600, border=False, key="conv_list_scroll"):
                     if not visible:
@@ -118,17 +124,23 @@ def render(client: AdminAPIClient) -> None:
                         title = conv.get("title", "Untitled") or "Untitled"
                         model = conv.get("model", "")
                         msg_count = conv.get("message_count", 0)
-                        last_active = conv.get("updated_at", "") or conv.get("created_at", "")
+                        last_active = conv.get("updated_at", "") or conv.get(
+                            "created_at", ""
+                        )
                         with st.container(key=f"conv_item_{conv_id}"):
                             if st.button(
                                 title,
                                 key=f"conv_open_{conv_id}",
                                 use_container_width=True,
-                                type="primary" if conv_id == st.session_state.conv_selected else "secondary",
+                                type="primary"
+                                if conv_id == st.session_state.conv_selected
+                                else "secondary",
                             ):
                                 st.session_state.conv_selected = conv_id
                                 st.rerun()
-                            st.caption(f"{model} · {msg_count} messages · {last_active[:16]}")
+                            st.caption(
+                                f"{model} · {msg_count} messages · {last_active[:16]}"
+                            )
 
         with detail_col:
             with st.container(key="conv_detail_pane"):
@@ -154,7 +166,9 @@ def render(client: AdminAPIClient) -> None:
                         f'<div class="rag-panel-heading">{escape(conv.get("title", "Untitled") or "Untitled")}</div>',
                         unsafe_allow_html=True,
                     )
-                    st.caption(f'{conv.get("model", "")} · {len(messages)} messages · Read-only')
+                    st.caption(
+                        f"{conv.get('model', '')} · {len(messages)} messages · Read-only"
+                    )
                 with actions:
                     with st.popover("⋯  Options", use_container_width=True):
                         st.download_button(
@@ -171,8 +185,11 @@ def render(client: AdminAPIClient) -> None:
                             key=f"dl_csv_{conv_id}",
                             use_container_width=True,
                         )
-                        if st.button("Delete conversation", key=f"conv_del_btn_{conv_id}",
-                                     use_container_width=True):
+                        if st.button(
+                            "Delete conversation",
+                            key=f"conv_del_btn_{conv_id}",
+                            use_container_width=True,
+                        ):
                             st.session_state[f"conv_del_{conv_id}"] = True
                             st.rerun()
 
@@ -181,8 +198,12 @@ def render(client: AdminAPIClient) -> None:
                     st.warning(f"Delete **{escape(conv.get('title', ''))}**?")
                     yes, no = st.columns(2)
                     with yes:
-                        if st.button("Confirm deletion", key=f"conv_confirm_{conv_id}",
-                                     type="primary", use_container_width=True):
+                        if st.button(
+                            "Confirm deletion",
+                            key=f"conv_confirm_{conv_id}",
+                            type="primary",
+                            use_container_width=True,
+                        ):
                             try:
                                 client.delete_conversation(conv_id)
                                 st.session_state[delete_key] = False
@@ -192,8 +213,11 @@ def render(client: AdminAPIClient) -> None:
                             except Exception as e:
                                 st.error(f"Failed: {e}")
                     with no:
-                        if st.button("Cancel", key=f"conv_cancel_{conv_id}",
-                                     use_container_width=True):
+                        if st.button(
+                            "Cancel",
+                            key=f"conv_cancel_{conv_id}",
+                            use_container_width=True,
+                        ):
                             st.session_state[delete_key] = False
                             st.rerun()
 

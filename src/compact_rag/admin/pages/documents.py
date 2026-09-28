@@ -68,7 +68,9 @@ def render(client: AdminAPIClient) -> None:
         items = data.get("data", [])
         pagination = data.get("pagination", {})
 
-        st.caption(f"{pagination.get('total', 0)} documents · Page {page} of {pagination.get('total_pages', 1) or 1}")
+        st.caption(
+            f"{pagination.get('total', 0)} documents · Page {page} of {pagination.get('total_pages', 1) or 1}"
+        )
 
         if not items:
             st.info("No documents found")
@@ -85,12 +87,15 @@ def render(client: AdminAPIClient) -> None:
             error_msg = doc.get("error_message", "")
 
             with st.container(border=True):
-                cols = st.columns([3.1, 1, .9, .9, 1.25], vertical_alignment="center")
+                cols = st.columns([3.1, 1, 0.9, 0.9, 1.25], vertical_alignment="center")
                 with cols[0]:
-                    st.markdown(f'<div class="rag-card-title">{escape(filename)}</div>', unsafe_allow_html=True)
+                    st.markdown(
+                        f'<div class="rag-card-title">{escape(filename)}</div>',
+                        unsafe_allow_html=True,
+                    )
                     st.markdown(
                         f'<div class="rag-card-description">{escape(file_type.upper() or "FILE")} · '
-                        f'{page_count} pages · ID {escape(doc_id[:8])}</div>',
+                        f"{page_count} pages · ID {escape(doc_id[:8])}</div>",
                         unsafe_allow_html=True,
                     )
                     if error_msg:

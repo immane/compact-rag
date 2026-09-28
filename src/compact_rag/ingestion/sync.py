@@ -91,7 +91,9 @@ async def sync_sources(settings, session, only: str | None = None) -> list[dict]
     return summaries
 
 
-def _record_sync_result(settings, name: str, watermark: str | None, summary: dict) -> None:
+def _record_sync_result(
+    settings, name: str, watermark: str | None, summary: dict
+) -> None:
     from compact_rag.config.runtime import load_runtime_config
 
     sources = load_runtime_config(settings).get("sources", [])

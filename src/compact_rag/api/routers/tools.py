@@ -33,13 +33,17 @@ async def get_dynamic_tools_config(settings: Settings = Depends(get_settings)):
 
 
 @router.put("/config/tools")
-async def update_dynamic_tools_config(body: dict, settings: Settings = Depends(get_settings)):
+async def update_dynamic_tools_config(
+    body: dict, settings: Settings = Depends(get_settings)
+):
     definitions = body.get("tools")
     if not isinstance(definitions, list):
         raise HTTPException(status_code=400, detail="Body must contain tools: [...]")
     names = [item.get("name") for item in definitions if isinstance(item, dict)]
     if len(names) != len(definitions) or len(set(names)) != len(names):
-        raise HTTPException(status_code=400, detail="Tools must be objects with unique names")
+        raise HTTPException(
+            status_code=400, detail="Tools must be objects with unique names"
+        )
     enabled = body.get("enabled")
     if enabled is not None and not isinstance(enabled, bool):
         raise HTTPException(status_code=400, detail="enabled must be boolean")
@@ -59,7 +63,9 @@ async def update_dynamic_tools_config(body: dict, settings: Settings = Depends(g
 
 
 @router.post("/config/tools/{tool_name}/test")
-async def test_dynamic_tool(tool_name: str, body: dict, settings: Settings = Depends(get_settings)):
+async def test_dynamic_tool(
+    tool_name: str, body: dict, settings: Settings = Depends(get_settings)
+):
     definition = next(
         (tool for tool in get_dynamic_tools(settings) if tool.get("name") == tool_name),
         None,
@@ -80,6 +86,7 @@ async def test_dynamic_tool(tool_name: str, body: dict, settings: Settings = Dep
         logger.warning("Dynamic tool test failed", tool=tool_name, error=str(e))
         return {"error": str(e)}
 
+
 @router.get("/config/sources")
 async def list_sources(settings: Settings = Depends(get_settings)):
     """List dynamic API data source definitions (auth tokens masked)."""
@@ -87,9 +94,7 @@ async def list_sources(settings: Settings = Depends(get_settings)):
 
 
 @router.put("/config/sources")
-async def replace_sources(
-    body: dict, settings: Settings = Depends(get_settings)
-):
+async def replace_sources(body: dict, settings: Settings = Depends(get_settings)):
     """Replace the source definition list.
 
     Each entry is validated as a ``SourceDefinition``. An empty
@@ -98,9 +103,7 @@ async def replace_sources(
     """
     raw_sources = body.get("sources")
     if not isinstance(raw_sources, list):
-        raise HTTPException(
-            status_code=400, detail="Body must be {'sources': [...]}"
-        )
+        raise HTTPException(status_code=400, detail="Body must be {'sources': [...]}")
     names = [s.get("name") for s in raw_sources if isinstance(s, dict)]
     if len(set(names)) != len(names):
         raise HTTPException(status_code=400, detail="Duplicate source names")

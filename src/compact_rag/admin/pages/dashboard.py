@@ -120,14 +120,29 @@ def render(client: AdminAPIClient) -> None:
                     if j.get("status") == "completed" and total_chunks == 0:
                         total_chunks = "-"
                     with st.container(border=True):
-                        row = st.columns([1.7, 1.2, 1.8, .8], vertical_alignment="center")
+                        row = st.columns(
+                            [1.7, 1.2, 1.8, 0.8], vertical_alignment="center"
+                        )
                         with row[0]:
-                            st.markdown(f'<div class="rag-card-title">Job {escape(j.get("id", "")[:8])}</div>', unsafe_allow_html=True)
+                            st.markdown(
+                                f'<div class="rag-card-title">Job {escape(j.get("id", "")[:8])}</div>',
+                                unsafe_allow_html=True,
+                            )
                         with row[1]:
-                            st.markdown(render_status_badge(j.get("status", "pending")), unsafe_allow_html=True)
+                            st.markdown(
+                                render_status_badge(j.get("status", "pending")),
+                                unsafe_allow_html=True,
+                            )
                         with row[2]:
-                            progress = min(processed_files / total_files, 1.0) if total_files else 0.0
-                            st.progress(progress, text=f"{processed_files} / {total_files} files")
+                            progress = (
+                                min(processed_files / total_files, 1.0)
+                                if total_files
+                                else 0.0
+                            )
+                            st.progress(
+                                progress,
+                                text=f"{processed_files} / {total_files} files",
+                            )
                         with row[3]:
                             render_compact_stat("Chunks", total_chunks)
             else:
@@ -147,6 +162,6 @@ def render(client: AdminAPIClient) -> None:
             for key, val in config_items.items():
                 st.markdown(
                     f'<div class="rag-config-row"><span>{escape(key)}</span>'
-                    f'<strong>{escape(str(val))}</strong></div>',
+                    f"<strong>{escape(str(val))}</strong></div>",
                     unsafe_allow_html=True,
                 )

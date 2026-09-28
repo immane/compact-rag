@@ -91,7 +91,9 @@ def render_title(template: str, record: dict) -> str:
         )
 
 
-def record_to_source_record(source_name: str, definition: SourceDefinition, raw: dict) -> SourceRecord:
+def record_to_source_record(
+    source_name: str, definition: SourceDefinition, raw: dict
+) -> SourceRecord:
     """Normalize one raw API item into a SourceRecord."""
     if definition.id_field not in raw:
         raise ValueError(
@@ -104,7 +106,9 @@ def record_to_source_record(source_name: str, definition: SourceDefinition, raw:
         if field in raw and raw[field] not in (None, ""):
             body_parts.append(f"{field}: {raw[field]}")
     content = f"# {title}\n\n" + "\n".join(body_parts)
-    updated_at = raw.get(definition.updated_at_field) if definition.updated_at_field else None
+    updated_at = (
+        raw.get(definition.updated_at_field) if definition.updated_at_field else None
+    )
     metadata = {
         "source": source_name,
         "external_id": external_id,
@@ -189,7 +193,9 @@ async def fetch_source(
                 break
             page = current + 1
     logger.info(
-        "Source fetched", source=definition.name, records=len(records),
+        "Source fetched",
+        source=definition.name,
+        records=len(records),
         pages=pages_fetched,
     )
     return records
@@ -225,7 +231,9 @@ async def _get_page(
             last_error = e
             logger.warning(
                 "Source page fetch failed, retrying",
-                source=definition.name, attempt=attempt + 1, error=str(e),
+                source=definition.name,
+                attempt=attempt + 1,
+                error=str(e),
             )
             await asyncio.sleep(0.5 * (2**attempt))
     raise IngestionError(

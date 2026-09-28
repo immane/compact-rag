@@ -119,9 +119,16 @@ class AdminSettings(BaseModel):
     password: str | None = None
 
 
-_PROJECT_ROOT = Path(
-    __file__
-).parent.parent.parent.parent  # src/compact_rag/config/ → project root
+_PACKAGE_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+_WORKING_PROJECT_ROOT = Path.cwd().resolve()
+# When installed in a container/site-packages, ``__file__`` points under
+# /usr/local/lib/pythonX.Y rather than the mounted application directory. Use
+# the current project directory whenever its config folder is present.
+_PROJECT_ROOT = (
+    _WORKING_PROJECT_ROOT
+    if (_WORKING_PROJECT_ROOT / "config" / "default.yaml").is_file()
+    else _PACKAGE_PROJECT_ROOT
+)
 
 
 def _resolve_config(path: str) -> Path:

@@ -18,7 +18,9 @@ def _load_config(client: AdminAPIClient) -> dict | None:
 
 
 def render(client: AdminAPIClient) -> None:
-    st.markdown('<div class="rag-eyebrow">Workspace / Tools</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="rag-eyebrow">Workspace / Tools</div>', unsafe_allow_html=True
+    )
     st.title("🛠️ Tools")
     st.markdown(
         '<p class="rag-subtitle">Define chat tools dynamically, connect APIs, and configure scheduled data sources.</p>',
@@ -36,32 +38,46 @@ def render(client: AdminAPIClient) -> None:
             value=bool(cfg.get("enabled", True)),
             key="tools_enabled",
         )
-        st.caption("The function names, request schemas, endpoints, and authentication headers below are all user-defined.")
+        st.caption(
+            "The function names, request schemas, endpoints, and authentication headers below are all user-defined."
+        )
 
     tools = cfg.get("tools", [])
     names = [item.get("name", "") for item in tools]
-    selected = st.selectbox("Edit tool", ["(new tool)", *names], key="dynamic_tool_select")
+    selected = st.selectbox(
+        "Edit tool", ["(new tool)", *names], key="dynamic_tool_select"
+    )
     current = next((item for item in tools if item.get("name") == selected), {})
     editor_current = dict(current)
     editor_current.pop("headers_configured", None)
-    current_text = json.dumps(editor_current, ensure_ascii=False, indent=2) if current else json.dumps(
-        {
-            "name": "search_records",
-            "description": "Search records relevant to the query",
-            "kind": "vector_search",
-            "enabled": True,
-            "parameters": {
-                "type": "object",
-                "properties": {"query": {"type": "string", "description": "Search query"}},
-                "required": ["query"],
+    current_text = (
+        json.dumps(editor_current, ensure_ascii=False, indent=2)
+        if current
+        else json.dumps(
+            {
+                "name": "search_records",
+                "description": "Search records relevant to the query",
+                "kind": "vector_search",
+                "enabled": True,
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Search query"}
+                    },
+                    "required": ["query"],
+                },
+                "collection": "default",
+                "query_argument": "query",
+                "top_k": 5,
             },
-            "collection": "default",
-            "query_argument": "query",
-            "top_k": 5,
-        }, ensure_ascii=False, indent=2,
+            ensure_ascii=False,
+            indent=2,
+        )
     )
     edited = st.text_area(
-        "Tool definition (JSON)", value=current_text, height=360,
+        "Tool definition (JSON)",
+        value=current_text,
+        height=360,
         help="kind=http supports GET/POST and {{argument}} templates in URL/headers/query/body. kind=vector_search searches a collection.",
         key="dynamic_tool_json",
     )
@@ -75,7 +91,11 @@ def render(client: AdminAPIClient) -> None:
                 if not isinstance(definition, dict):
                     raise ValueError("Tool definition must be a JSON object")
                 new_tools = [tool for tool in tools if tool.get("name") != selected]
-                new_tools = [tool for tool in new_tools if tool.get("name") != definition.get("name")]
+                new_tools = [
+                    tool
+                    for tool in new_tools
+                    if tool.get("name") != definition.get("name")
+                ]
                 new_tools.append(definition)
                 client.save_tools_config(enabled, new_tools)
                 st.success(f"Saved tool '{definition.get('name', '')}'")
@@ -83,9 +103,13 @@ def render(client: AdminAPIClient) -> None:
             except Exception as e:
                 st.error(f"Save failed: {e}")
     with delete_col:
-        if selected != "(new tool)" and st.button("Delete Tool", key="delete_dynamic_tool"):
+        if selected != "(new tool)" and st.button(
+            "Delete Tool", key="delete_dynamic_tool"
+        ):
             try:
-                client.save_tools_config(enabled, [tool for tool in tools if tool.get("name") != selected])
+                client.save_tools_config(
+                    enabled, [tool for tool in tools if tool.get("name") != selected]
+                )
                 st.success(f"Deleted '{selected}'")
                 st.rerun()
             except Exception as e:
@@ -94,7 +118,9 @@ def render(client: AdminAPIClient) -> None:
     with st.expander("Test configured tool"):
         if names:
             test_name = st.selectbox("Tool", names, key="dynamic_tool_test_name")
-            test_args_text = st.text_area("Arguments (JSON)", "{}", key="dynamic_tool_test_args")
+            test_args_text = st.text_area(
+                "Arguments (JSON)", "{}", key="dynamic_tool_test_args"
+            )
             if st.button("Run tool", key="run_dynamic_tool_test"):
                 try:
                     arguments = json.loads(test_args_text)
@@ -110,6 +136,7 @@ def render(client: AdminAPIClient) -> None:
     _render_sources(client)
 
     st.write("")
+
 
 def _render_sources(client: AdminAPIClient) -> None:
     with st.container(border=True):
@@ -141,9 +168,17 @@ def _render_sources(client: AdminAPIClient) -> None:
                 c1, c2, c3 = st.columns([3.5, 1, 1], vertical_alignment="center")
                 with c1:
                     status = "Enabled" if s.get("enabled") else "Disabled"
-                    st.markdown(f'<div class="rag-card-title">{name} <span class="rag-card-description">· {status}</span></div>', unsafe_allow_html=True)
-                    st.markdown(f'<div class="rag-card-description">Collection · {s.get("collection", "")}</div>', unsafe_allow_html=True)
-                    st.caption(f"Last sync: {s.get('last_sync') or 'Never'} · {summary} · token {'configured' if s.get('auth_token_configured') else 'not configured'}")
+                    st.markdown(
+                        f'<div class="rag-card-title">{name} <span class="rag-card-description">· {status}</span></div>',
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown(
+                        f'<div class="rag-card-description">Collection · {s.get("collection", "")}</div>',
+                        unsafe_allow_html=True,
+                    )
+                    st.caption(
+                        f"Last sync: {s.get('last_sync') or 'Never'} · {summary} · token {'configured' if s.get('auth_token_configured') else 'not configured'}"
+                    )
                 with c2:
                     if st.button("🔄 Sync", key=f"sync_{name}"):
                         try:
@@ -179,34 +214,64 @@ def _render_sources(client: AdminAPIClient) -> None:
 
         with st.form("source_form"):
             f_name = st.text_input("Name (a-z, 0-9, -, _)", value=_text("name"))
-            f_collection = st.text_input("Target collection", value=_text("collection", "default"))
+            f_collection = st.text_input(
+                "Target collection", value=_text("collection", "default")
+            )
             f_base = st.text_input("Base URL", value=_text("base_url"))
             f_path = st.text_input("Path", value=_text("path", "/"))
-            f_auth_header = st.text_input("Auth header", value=_text("auth_header", "x-auth-token"))
+            f_auth_header = st.text_input(
+                "Auth header", value=_text("auth_header", "x-auth-token")
+            )
             f_token = st.text_input(
-                "Auth token", value="", type="password",
-                placeholder="空 = 保持不变" if current.get("auth_token_configured") else "Required",
+                "Auth token",
+                value="",
+                type="password",
+                placeholder="空 = 保持不变"
+                if current.get("auth_token_configured")
+                else "Required",
             )
             c1, c2, c3 = st.columns(3)
             with c1:
-                f_page_param = st.text_input("Page param", value=_text("page_param", "page"))
-                f_page_size = st.number_input("Page size", min_value=1, max_value=1000,
-                                              value=int(current.get("page_size", 100) or 100))
+                f_page_param = st.text_input(
+                    "Page param", value=_text("page_param", "page")
+                )
+                f_page_size = st.number_input(
+                    "Page size",
+                    min_value=1,
+                    max_value=1000,
+                    value=int(current.get("page_size", 100) or 100),
+                )
             with c2:
                 f_items = st.text_input("Items path", value=_text("items_path", "data"))
                 f_code = st.text_input("Code path", value=_text("code_path", "code"))
-                f_success = st.number_input("Success code", value=int(current.get("success_code", 0) or 0))
+                f_success = st.number_input(
+                    "Success code", value=int(current.get("success_code", 0) or 0)
+                )
             with c3:
-                f_paginator = st.text_input("Paginator path", value=_text("paginator_path", "paginator"))
-                f_current = st.text_input("Current-page field", value=_text("current_page_field", "current"))
-                f_last = st.text_input("Last-page field", value=_text("last_page_field", "last"))
+                f_paginator = st.text_input(
+                    "Paginator path", value=_text("paginator_path", "paginator")
+                )
+                f_current = st.text_input(
+                    "Current-page field", value=_text("current_page_field", "current")
+                )
+                f_last = st.text_input(
+                    "Last-page field", value=_text("last_page_field", "last")
+                )
             f_id = st.text_input("ID field", value=_text("id_field", "id"))
-            f_updated = st.text_input("Updated-at field (empty = full sync each time)",
-                                      value=_text("updated_at_field"))
-            f_title = st.text_input("Title template", value=_text("title_template", "#{id}"))
+            f_updated = st.text_input(
+                "Updated-at field (empty = full sync each time)",
+                value=_text("updated_at_field"),
+            )
+            f_title = st.text_input(
+                "Title template", value=_text("title_template", "#{id}")
+            )
             body_default = current.get("body_fields", ["content"])
-            f_body = st.text_input("Body fields (comma separated)",
-                                   value=", ".join(body_default) if isinstance(body_default, list) else str(body_default or ""))
+            f_body = st.text_input(
+                "Body fields (comma separated)",
+                value=", ".join(body_default)
+                if isinstance(body_default, list)
+                else str(body_default or ""),
+            )
             f_enabled = st.checkbox("Enabled", value=bool(current.get("enabled", True)))
             submitted = st.form_submit_button("Save Source", type="primary")
         if submitted:
@@ -231,7 +296,10 @@ def _render_sources(client: AdminAPIClient) -> None:
                 "id_field": (f_id or "").strip() or "id",
                 "updated_at_field": (f_updated or "").strip() or None,
                 "title_template": (f_title or "").strip() or "#{id}",
-                "body_fields": [b.strip() for b in (f_body or "").split(",") if b.strip()] or ["content"],
+                "body_fields": [
+                    b.strip() for b in (f_body or "").split(",") if b.strip()
+                ]
+                or ["content"],
                 "enabled": bool(f_enabled),
             }
             if choice not in ("(new source)", entry["name"]):

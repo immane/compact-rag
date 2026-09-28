@@ -86,10 +86,7 @@ def save_runtime_config(settings, patch: dict) -> dict:
 def _deep_merge_dicts(base: dict, override: dict) -> dict:
     result = dict(base)
     for key, value in override.items():
-        if (
-            isinstance(value, dict)
-            and isinstance(result.get(key), dict)
-        ):
+        if isinstance(value, dict) and isinstance(result.get(key), dict):
             result[key] = _deep_merge_dicts(result[key], value)
         else:
             result[key] = value
@@ -128,9 +125,7 @@ def masked_dynamic_tools_view(settings) -> list[dict]:
             item["headers_configured"] = {
                 key: bool(value) for key, value in headers.items()
             }
-            item["headers"] = {
-                key: "" for key in headers
-            }
+            item["headers"] = {key: "" for key in headers}
         view.append(item)
     return view
 

@@ -41,7 +41,9 @@ def render(client: AdminAPIClient) -> None:
         items = data.get("data", [])
         pagination = data.get("pagination", {})
 
-        st.caption(f"{pagination.get('total', 0)} jobs · Page {page} of {pagination.get('total_pages', 1) or 1}")
+        st.caption(
+            f"{pagination.get('total', 0)} jobs · Page {page} of {pagination.get('total_pages', 1) or 1}"
+        )
 
         if not items:
             st.info("No ingestion jobs found")
@@ -67,9 +69,15 @@ def render(client: AdminAPIClient) -> None:
             with st.container(border=True):
                 cols = st.columns([2.2, 1, 2.2, 1.4], vertical_alignment="center")
                 with cols[0]:
-                    st.markdown(f'<div class="rag-card-title">Job {escape(job_id[:12])}</div>', unsafe_allow_html=True)
+                    st.markdown(
+                        f'<div class="rag-card-title">Job {escape(job_id[:12])}</div>',
+                        unsafe_allow_html=True,
+                    )
                     collection_id = job.get("collection_id", "")
-                    st.markdown(f'<div class="rag-card-description">Collection · {escape(collection_id[:12] or "-")}</div>', unsafe_allow_html=True)
+                    st.markdown(
+                        f'<div class="rag-card-description">Collection · {escape(collection_id[:12] or "-")}</div>',
+                        unsafe_allow_html=True,
+                    )
                 with cols[1]:
                     st.markdown(render_status_badge(status), unsafe_allow_html=True)
                 with cols[2]:
@@ -78,7 +86,9 @@ def render(client: AdminAPIClient) -> None:
                         st.progress(
                             progress, text=f"Files: {display_processed}/{total_files}"
                         )
-                    render_compact_stat("Chunks", display_chunks if display_chunks is not None else "-")
+                    render_compact_stat(
+                        "Chunks", display_chunks if display_chunks is not None else "-"
+                    )
                 with cols[3]:
                     if started or created:
                         st.caption(f"Started: {(started or created)[:19]}")
