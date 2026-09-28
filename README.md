@@ -9,6 +9,59 @@
 
 **compact-rag** is a Retrieval-Augmented Generation (RAG) system built for the enterprise — CPU-only operation, local-first, async throughout, and production-deployable with zero external service dependencies.
 
+## 🖥️ Admin UI
+
+| Dashboard | Chat Playground | Dynamic Tools |
+|---|---|---|
+| <img src="docs/images/dashboard.png" alt="compact-rag admin dashboard" width="320"> | <img src="docs/images/playground.png" alt="compact-rag chat playground" width="320"> | <img src="docs/images/tools.png" alt="compact-rag dynamic tools configuration" width="320"> |
+
+## 🏗 Architecture
+
+```mermaid
+flowchart TB
+    User[User / API Client]
+    Admin[Streamlit Admin]
+    API[FastAPI REST API<br/>OpenAI-compatible + SSE]
+    Pipeline[RAG Pipeline<br/>Retrieve → Rerank → Context → Generate]
+
+    User --> API
+    Admin --> API
+    API --> Pipeline
+
+    subgraph Retrieval[Hybrid Retrieval]
+        Dense[Dense Search]
+        Sparse[BM25 Search]
+        Fusion[RRF / RSF Fusion]
+        Rerank[Cross-Encoder Reranker]
+        Dense --> Fusion
+        Sparse --> Fusion
+        Fusion --> Rerank
+    end
+
+    subgraph Generation[Generation and Tools]
+        LLM[LLM Provider<br/>OpenAI / Anthropic / Ollama]
+        Tools[Runtime-defined Tools<br/>HTTP API / Vector Search]
+    end
+
+    subgraph Ingestion[Document and API Data Ingestion]
+        Sources[Files / URLs / Paginated APIs]
+        Loaders[Load, Chunk, Normalize]
+        Embed[Embedding Service]
+        Sources --> Loaders --> Embed
+    end
+
+    Pipeline --> Dense
+    Pipeline --> LLM
+    Pipeline --> Tools
+    Chroma[(ChromaDB<br/>Vector Store)] --> Dense
+    Chroma --> Sparse
+    Rerank --> Pipeline
+    Embed --> Chroma
+    Loaders --> SQL[(SQLite / MySQL<br/>Metadata and Conversations)]
+    API --> SQL
+    Loaders --> Storage[(Local / MinIO / OSS / S3<br/>File Storage)]
+```
+
 ---
 
 ## ✨ Features
@@ -49,34 +102,6 @@ curl http://127.0.0.1:8000/v1/health
 ```
 
 📖 **[QUICKSTART.md](QUICKSTART.md)** — complete setup guide with examples.
-
-## 🏗 Architecture
-
-```
-                           ┌─────────────────────────────────┐
-                           │          API Layer              │
-                           │  FastAPI + Pydantic v2          │
-                           │  /v1/chat/completions ...       │
-                           └──────────────┬──────────────────┘
-                                          │
-                           ┌──────────────▼───────────────────┐
-                           │       RAG Pipeline               │
-                           │  query → retrieve → rerank →     │
-                           │  context → generate → citations  │
-                           └──────────────┬───────────────────┘
-              ┌───────────────────────────┼───────────────────────┐
-              │                           │                       │
-    ┌─────────▼─────────┐   ┌─────────────▼──────────┐  ┌────────▼────────┐
-    │   Retrieval Layer  │   │   Generation Layer     │  │  Tool Calling   │
-    │  Dense + Sparse    │   │  OpenAI/Anthropic/     │  │  Engine +       │
-    │  RRF + CrossEnc    │   │  Ollama • Prompt Mgr   │  │  Builtin Tools  │
-    └─────────┬─────────┘   └────────────────────────┘  └─────────────────┘
-              │
-    ┌─────────┼─────────┬──────────────┐
-    ▼         ▼         ▼              ▼
- ChromaDB  SQLite/MySQL  Embedding    File Storage
- (Vector)  (Metadata)    Service      (Local/MinIO/OSS/S3)
-```
 
 ## 📦 Installation Options
 

@@ -9,6 +9,59 @@
 
 **compact-rag** 是一个面向企业的检索增强生成（RAG）系统——纯 CPU 运行、本地优先、全链路异步、零外部服务依赖即可投入生产。
 
+## 🖥️ 管理后台
+
+| 仪表盘 | 问答调试台 | 动态工具配置 |
+|---|---|---|
+| <img src="docs/images/dashboard.png" alt="compact-rag 管理后台仪表盘" width="320"> | <img src="docs/images/playground.png" alt="compact-rag 问答调试台" width="320"> | <img src="docs/images/tools.png" alt="compact-rag 动态工具配置" width="320"> |
+
+## 🏗 系统架构
+
+```mermaid
+flowchart TB
+    User[用户 / API 客户端]
+    Admin[Streamlit 管理后台]
+    API[FastAPI REST API<br/>兼容 OpenAI + SSE]
+    Pipeline[RAG 管线<br/>检索 → 重排 → 上下文 → 生成]
+
+    User --> API
+    Admin --> API
+    API --> Pipeline
+
+    subgraph Retrieval[混合检索]
+        Dense[密集向量检索]
+        Sparse[BM25 稀疏检索]
+        Fusion[RRF / RSF 融合]
+        Rerank[Cross-Encoder 重排序]
+        Dense --> Fusion
+        Sparse --> Fusion
+        Fusion --> Rerank
+    end
+
+    subgraph Generation[生成与动态工具]
+        LLM[LLM Provider<br/>OpenAI / Anthropic / Ollama]
+        Tools[运行时配置工具<br/>HTTP API / 向量检索]
+    end
+
+    subgraph Ingestion[文档与 API 数据摄入]
+        Sources[文件 / URL / 分页 API]
+        Loaders[加载、分块、规范化]
+        Embed[Embedding 服务]
+        Sources --> Loaders --> Embed
+    end
+
+    Pipeline --> Dense
+    Pipeline --> LLM
+    Pipeline --> Tools
+    Chroma[(ChromaDB<br/>向量存储)] --> Dense
+    Chroma --> Sparse
+    Rerank --> Pipeline
+    Embed --> Chroma
+    Loaders --> SQL[(SQLite / MySQL<br/>元数据与对话)]
+    API --> SQL
+    Loaders --> Storage[(Local / MinIO / OSS / S3<br/>文件存储)]
+```
+
 ---
 
 ## ✨ 核心能力
@@ -19,7 +72,7 @@
 | **表格智能处理** | 从 PDF/HTML 中提取表格并转为 Markdown，保留结构化关系 |
 | **混合检索** | 密集向量检索（Embedding）+ 稀疏检索（BM25）+ Cross-Encoder 重排序 |
 | **LLM 抽象** | 统一接口，支持 OpenAI / Anthropic / Ollama |
-| **Tool Calling** | 轻量级 ~80 行工具调用框架，自动生成 JSON Schema |
+| **动态工具调用** | 在管理后台配置 HTTP API 或向量检索工具，支持自定义参数 Schema |
 | **对话记忆** | 完整对话历史，支持上下文感知的多轮问答 |
 | **REST API** | 兼容 OpenAI API 格式，支持 SSE 流式输出 |
 | **双数据库** | ChromaDB（向量）+ MySQL/SQLite（结构元数据） |
@@ -49,34 +102,6 @@ curl http://127.0.0.1:8000/v1/health
 ```
 
 📖 **[QUICKSTART.md](QUICKSTART.md)** — 完整上手指南，含示例。
-
-## 🏗 系统架构
-
-```
-                           ┌─────────────────────────────────┐
-                           │          API 层                 │
-                           │  FastAPI + Pydantic v2          │
-                           │  /v1/chat/completions ...       │
-                           └──────────────┬──────────────────┘
-                                          │
-                           ┌──────────────▼───────────────────┐
-                           │       RAG 管线编排               │
-                           │  查询 → 检索 → 重排 →            │
-                           │  上下文 → 生成 → 引文标注        │
-                           └──────────────┬───────────────────┘
-              ┌───────────────────────────┼───────────────────────┐
-              │                           │                       │
-    ┌─────────▼─────────┐   ┌─────────────▼──────────┐  ┌────────▼────────┐
-    │   检索层           │   │   生成层               │  │   Tool Calling  │
-    │  密集 + 稀疏       │   │  OpenAI/Anthropic/     │  │   引擎 +        │
-    │  RRF + CrossEnc    │   │  Ollama • 提示词管理   │  │   内置工具      │
-    └─────────┬─────────┘   └────────────────────────┘  └─────────────────┘
-              │
-    ┌─────────┼─────────┬──────────────┐
-    ▼         ▼         ▼              ▼
- ChromaDB  SQLite/MySQL  Embedding    文件存储
- (向量)    (元数据)      服务          (Local/MinIO/OSS/S3)
-```
 
 ## 📦 安装选项
 
